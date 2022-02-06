@@ -1,0 +1,10 @@
+VAR    shirina,tol,pl   :Integer;
+        visota,V   :Real;
+BEGIN
+        shirina:=8;   
+        tol:=5;  
+        visota:=12.41;
+        pl := shirina * tol;
+        V  := pl * visota;
+        WriteLn (pl,'    ', V  :10:3)
+END.

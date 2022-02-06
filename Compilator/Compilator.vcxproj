@@ -139,7 +139,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="CLexer.cpp" />
     <ClCompile Include="Compilator.cpp" />
+    <ClCompile Include="CToken.cpp" />
+    <ClCompile Include="CVariant.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="CLexer.h" />
+    <ClInclude Include="CToken.h" />
+    <ClInclude Include="CVariant.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
