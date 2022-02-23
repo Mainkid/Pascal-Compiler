@@ -4,32 +4,44 @@
 #include <iostream>
 #include "CLexer.h"
 #include "CToken.h"
+#include "CVariant.h"
+#include "CSyntax.h"
 #include <fstream>
 #include <string>
 #include <streambuf>
 #include <memory>
 
 using namespace std;
-typedef std::unique_ptr<CToken> CTokenPtr; //fix
+//TODO: Дописать парсинг комментариев
+//TODO: Вывести все typedef в отдельный хеддер
+//Для всех токенов сделать метод для получения значений
+//TODO SYNTAX: Секция типов доделать
+//TODO SYNTAX: Секция
+
+
 
 const string program = 
-R"(while x>0.25 do
-   begin
-   x:=0;
-   if(x>=0)then
-        a=0
-   end;)";
+R"(program myProgram;
+begin
+p1:=n div 1000;
+p4:=n mod 10;
+p2:=(n div 100) mod 10;
+p3:=(n div 10) mod 10;
+end.)";
 
 int main()
 {
     
-    auto lexer = new CLexer(program+' ');
+    /*auto lexer = new CLexer(program+' ');
     CTokenPtr token = nullptr;
     while (token = move(lexer -> GetNextToken())) {
+        
         cout << "OK" << endl;
     }
-    cout << "Hello World!\n";
+    cout << "Hello World!\n";*/
 
-    //TODO: проверить на других программах паскаль
+    auto syntax = new CSyntax();
+    syntax->StartSyntaxAnalyze(program);
+
 }
 

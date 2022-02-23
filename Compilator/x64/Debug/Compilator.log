@@ -1,3 +1,2 @@
-﻿  CLexer.cpp
-C:\Users\jdczy\source\repos\Compilator\Compilator\CLexer.cpp(114): warning C4715: CLexer::IsInteger: значение возвращается не при всех путях выполнения
+﻿  Compilator.cpp
   Compilator.vcxproj -> C:\Users\jdczy\source\repos\Compilator\x64\Debug\Compilator.exe

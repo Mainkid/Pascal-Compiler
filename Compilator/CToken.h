@@ -3,6 +3,9 @@
 #include <string>
 #include <map>
 #include "CVariant.h"
+#include "CToken.h"
+
+
 
 typedef std::unique_ptr<CVariant> CVariantPtr;
 
@@ -14,6 +17,7 @@ enum class TokenType {
 
 enum class KeyWords {
 	emptyValueSy,
+	quoteSy,
 	ifSy,
 	elseSy,
 	thenSy,
@@ -34,6 +38,15 @@ enum class KeyWords {
 	booleanSy,
 	caseSy,
 	ofSy,
+	repeatSy,
+	untilSy,
+	semicolonSy,
+	programSy,
+	typeSy,
+	commaSy,
+	inSy,
+	divSy,
+	modSy,
 
 	plusSy,
 	minusSy,
@@ -50,7 +63,8 @@ enum class KeyWords {
 	orSy,
 	notSy,
 	bracketOpenSy,
-	bracketCloseSy
+	bracketCloseSy,
+	colonSy
 };
 
 
@@ -62,7 +76,7 @@ public:
 	CToken(TokenType _type);
 	~CToken();
 	TokenType getType();
-	virtual std::string ToString() = 0;
+	virtual std::string ToString()=0;
 };
 
 class CIdentToken : public CToken {
@@ -70,6 +84,7 @@ public:
 	std::string ToString() override;
 	CIdentToken();
 	CIdentToken(std::string);
+private:
 	std::string value;
 };
 class CKeywordToken : public CToken {
@@ -77,6 +92,8 @@ public:
 	std::string ToString() override;
 	CKeywordToken();
 	CKeywordToken(KeyWords v);
+	KeyWords GetValue();
+private:
 	KeyWords value=KeyWords::emptyValueSy;
 };
 class CConstToken : public CToken {
@@ -86,6 +103,8 @@ public:
 	CConstToken(int v);
 	CConstToken(float v);
 	CConstToken(bool v);
+	CConstToken(std::string v);
 private:
 	CVariantPtr value;
+	
 };

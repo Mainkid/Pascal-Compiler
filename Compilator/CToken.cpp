@@ -16,6 +16,7 @@ CToken::~CToken()
 
 }
 
+
 TokenType CToken::getType()
 {
 	return this->tType;
@@ -34,6 +35,11 @@ std::string CKeywordToken::ToString()
 std::string CConstToken::ToString()
 {
 	return "";
+}
+
+KeyWords CKeywordToken::GetValue()
+{
+	return this->value;
 }
 
 CIdentToken::CIdentToken() :CToken(TokenType::ttIdent)
@@ -69,6 +75,11 @@ CConstToken::CConstToken(float v) : CToken(TokenType::ttConst)
 CConstToken::CConstToken(bool v) : CToken(TokenType::ttConst)
 {
 	this->value = std::make_unique<CBooleanVariant>(v);
+}
+
+CConstToken::CConstToken(std::string v) : CToken(TokenType::ttConst)
+{
+	this->value = std::make_unique<CStringVariant>(v);
 }
 
 CConstToken::CConstToken() : CToken(TokenType::ttConst)

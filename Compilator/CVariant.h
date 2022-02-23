@@ -20,10 +20,7 @@ class CIntVariant : public CVariant {
 private:
 	int value;
 public:
-	CIntVariant(int val) : CVariant(VariantType::vtInt)
-	{
-		value = val;
-	};
+	CIntVariant(int val);
 	int GetValue();
 	std::string ToString() override;
 };
@@ -32,10 +29,7 @@ class CRealVariant : public CVariant {
 private:
 	float value;
 public:
-	CRealVariant(float val) : CVariant(VariantType::vtReal)
-	{
-		value = val;
-	};
+	CRealVariant(float val);
 	float GetValue();
 	std::string ToString()override;
 
@@ -45,10 +39,16 @@ class CBooleanVariant: public CVariant{
 private:
 	bool value;
 public:
-	CBooleanVariant(bool val) : CVariant(VariantType::vtBoolean)
-	{
-		value = val;
-	};
+	CBooleanVariant(bool val);
 	bool GetValue();
+	std::string ToString() override;
+};
+
+class CStringVariant : public CVariant {
+private:
+	std::string value;
+public:
+	CStringVariant(std::string val);
+	std::string GetValue();
 	std::string ToString() override;
 };
