@@ -16,6 +16,7 @@ enum class TokenType {
 };
 
 enum class KeyWords {
+	errorValueSy,
 	emptyValueSy,
 	quoteSy,
 	ifSy,
@@ -47,6 +48,7 @@ enum class KeyWords {
 	inSy,
 	divSy,
 	modSy,
+	dotSy,
 
 	plusSy,
 	minusSy,
@@ -84,6 +86,7 @@ public:
 	std::string ToString() override;
 	CIdentToken();
 	CIdentToken(std::string);
+	std::string GetValue();
 private:
 	std::string value;
 };

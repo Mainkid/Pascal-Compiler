@@ -11,7 +11,7 @@ CBooleanVariant::CBooleanVariant(bool val) : CVariant(VariantType::vtBoolean)
 	value = val;
 }
 
-CRealVariant::CRealVariant(float val) : CVariant(VariantType::vtBoolean)
+CRealVariant::CRealVariant(float val) : CVariant(VariantType::vtReal)
 {
 	value = val;
 }
@@ -64,7 +64,10 @@ bool CBooleanVariant::GetValue()
 
 std::string CBooleanVariant::ToString()
 {
-	return std::to_string(value); 
+	if (value)
+		return "true";
+	else
+		return "false";
 }
 
 std::string CStringVariant::GetValue()

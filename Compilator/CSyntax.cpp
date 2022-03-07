@@ -364,12 +364,13 @@ bool CSyntax::ComplexOperator(bool isChecking)
 
 bool CSyntax::ChoosingOperator(bool isChecking)
 {
-    if (IfOperator(true))
-        IfOperator(false);
-    else if ()
+    //if (IfOperator(true))
+        //IfOperator(false);
+    //else if ()
+    return true;
 }
 
 bool CSyntax::CycleOperator(bool isChecking)
 {
-
+    return true;
 }

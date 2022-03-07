@@ -2,12 +2,13 @@
 //
 
 #include <iostream>
+#include <fstream>
+#include <string>
 #include "CLexer.h"
 #include "CToken.h"
 #include "CVariant.h"
 #include "CSyntax.h"
-#include <fstream>
-#include <string>
+
 #include <streambuf>
 #include <memory>
 
@@ -20,28 +21,48 @@ using namespace std;
 
 
 
-const string program = 
-R"(program myProgram;
-begin
-p1:=n div 1000;
-p4:=n mod 10;
-p2:=(n div 100) mod 10;
-p3:=(n div 10) mod 10;
+string program = 
+R"(program myProgram; 
+33 true false 14.12 fucking 
 end.)";
+
+void testLexer()
+{
+    auto lexer = new CLexer(program + ' ');
+    CTokenPtr token = nullptr;
+    while (token = move(lexer->GetNextToken())) {
+
+        if (token.get()->getType() == TokenType::ttKeyword)
+        {
+            int code= static_cast<int>(dynamic_cast<CKeywordToken*>(token.release())->GetValue());
+            cout << code <<" ";
+        }
+        else if (token.get()->getType() == TokenType::ttConst)
+        {
+
+            cout << "constVal(" << dynamic_cast<CConstToken*>(token.release())->ToString() <<") ";
+        }
+        else if (token.get()->getType() == TokenType::ttIdent)
+        {
+            cout << "ident(" << dynamic_cast<CIdentToken*>(token.release())->GetValue() << ") ";
+        }
+
+        
+    }
+
+}
 
 int main()
 {
     
-    /*auto lexer = new CLexer(program+' ');
-    CTokenPtr token = nullptr;
-    while (token = move(lexer -> GetNextToken())) {
-        
-        cout << "OK" << endl;
-    }
-    cout << "Hello World!\n";*/
+    setlocale(0, "");
+    testLexer();
+    
 
-    auto syntax = new CSyntax();
-    syntax->StartSyntaxAnalyze(program);
+    //auto syntax = new CSyntax();
+    //syntax->StartSyntaxAnalyze(program);
 
 }
+
+
 

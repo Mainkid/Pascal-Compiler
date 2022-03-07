@@ -24,22 +24,46 @@ TokenType CToken::getType()
 
 std::string CIdentToken::ToString()
 {
-	return "";
+	return value;
 }
+
+std::string CIdentToken::GetValue()
+{
+	return value;
+}
+
 
 std::string CKeywordToken::ToString()
 {
-	return "";
+	//Ok?
+	return "KeyWord";
 }
 
 std::string CConstToken::ToString()
 {
+	if (value.get()->GetVariantType() == VariantType::vtBoolean)
+	{
+		return dynamic_cast<CBooleanVariant*>(value.get())->ToString();
+	}
+	else if (value.get()->GetVariantType() == VariantType::vtInt)
+	{
+		return dynamic_cast<CIntVariant*>(value.get())->ToString();
+	}
+	else if (value.get()->GetVariantType() == VariantType::vtReal)
+	{
+		return dynamic_cast<CRealVariant*>(value.get())->ToString();
+	}
+	else if (value.get()->GetVariantType() == VariantType::vtString)
+	{
+		return dynamic_cast<CStringVariant*>(value.get())->ToString();
+	}
+
 	return "";
 }
 
 KeyWords CKeywordToken::GetValue()
 {
-	return this->value;
+	return value;
 }
 
 CIdentToken::CIdentToken() :CToken(TokenType::ttIdent)

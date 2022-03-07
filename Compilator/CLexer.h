@@ -1,6 +1,6 @@
 #pragma once
 #include "CToken.h"
-
+#include <fstream>
 
 
 
@@ -28,15 +28,20 @@ public:
 	bool IsInteger(std::string);
 	bool IsBoolean(std::string);
 	LexicalError IsIdentifier(std::string);
+	bool ReadNextLine();
 	CLexer(std::string);
 	~CLexer();
 	bool isQuotationOpened = false;
+	std::string toLowerCase(std::string);
 private:
 	const std::string separators = R"(:=<>;,()*+/- ")";
 	const std::string unknownSymbols = "`~@¹$<>|"; 
 	std::string programText;
 	std::string currentToken="";
 	int currentPosition=0;
+	int currentLine = 0;
+	std::ifstream file;
+	std::string errorList="";
 	
 };
 
