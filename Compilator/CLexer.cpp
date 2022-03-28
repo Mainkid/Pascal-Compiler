@@ -1,11 +1,12 @@
 
 #include <iostream>
+#include <cstdint>
 #include <fstream>
 #include <string>
 #include <cstring>
 #include <memory>
-
-
+#include <algorithm>
+#include <iomanip>
 
 
 #include "CTypes.h"
@@ -19,6 +20,7 @@
 	CTokenPtr CLexer::GetTokenType()
 	{	
 		std::string token = toLowerCase(currentToken);
+		prevToken = token;
 		currentToken = "";
 
 		if (currentPosition >= programText.length() - 1)
@@ -377,6 +379,21 @@
 		currentPosition = 0;
 		currentLine++;
 		return true;
+	}
+
+	int CLexer::GetLinePos()
+	{
+		return currentLine+1;
+	}
+
+	int CLexer::GetSymbolPos()
+	{
+		int q = currentPosition - prevToken.length();
+		if (q >= 0)
+			return currentPosition - prevToken.length();
+		else
+			return currentPosition;
+
 	}
 
 	CLexer :: CLexer(std::string path) {

@@ -27,6 +27,8 @@ public:
 	bool IsReal(std::string);
 	bool IsInteger(std::string);
 	bool IsBoolean(std::string);
+	int GetLinePos();
+	int GetSymbolPos();
 	LexicalError IsIdentifier(std::string);
 	bool ReadNextLine();
 	CLexer(std::string);
@@ -40,6 +42,7 @@ private:
 	std::string currentToken="";
 	int currentPosition=0;
 	int currentLine = 0;
+	std::string prevToken = "";
 	std::ifstream file;
 	std::string errorList="";
 	

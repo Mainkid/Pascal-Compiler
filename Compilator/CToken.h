@@ -66,7 +66,10 @@ enum class KeyWords {
 	notSy,
 	bracketOpenSy,
 	bracketCloseSy,
-	colonSy
+	colonSy,
+
+	errIdent,
+	errConst
 };
 
 

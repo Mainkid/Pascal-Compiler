@@ -147,6 +147,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CLexer.h" />
+    <ClInclude Include="CSemantic.h" />
     <ClInclude Include="CSyntax.h" />
     <ClInclude Include="CToken.h" />
     <ClInclude Include="CTypes.h" />

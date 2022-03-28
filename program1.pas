@@ -1,2 +1,7 @@
-PROGRAM TeSt2;
-str:="1231"";
+
+
+program binCode;
+begin
+binCode(f,(5-2));
+x:=2;
+end.

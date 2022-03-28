@@ -17,13 +17,13 @@ using namespace std;
 //TODO: Вывести все typedef в отдельный хеддер
 //Для всех токенов сделать метод для получения значений
 //TODO SYNTAX: Секция типов доделать
-//TODO SYNTAX: Секция
+//TODO SYNTAX: Добавить WriteLN
 
 
 
 string program = 
 R"(program myProgram; 
-33 true false 14.12 fucking 
+33 true false 14.12
 end.)";
 
 void testLexer()
@@ -56,11 +56,11 @@ int main()
 {
     
     setlocale(0, "");
-    testLexer();
+    //testLexer();
     
 
-    //auto syntax = new CSyntax();
-    //syntax->StartSyntaxAnalyze(program);
+    auto syntax = new CSyntax();
+    syntax->StartSyntaxAnalyze(program);
 
 }
 

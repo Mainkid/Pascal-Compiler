@@ -6,6 +6,7 @@
 
 
 
+
 CToken::CToken(TokenType _type)
 {
 	this->tType = _type;
