@@ -14,6 +14,43 @@ CSyntax::~CSyntax()
 
 }
 
+void CSyntax::AddNewVariables(CIdentToken* type, UsageType usageType)
+{
+
+    while (!identQueue.empty())
+    {
+        if (!isSkipping)
+            ThrowSemanticError(currentScope->AddIdent(identQueue.front(), usageType, type));
+        identQueue.pop();
+    }
+}
+
+void CSyntax::ThrowSemanticError(SemanticError err)
+{
+    switch (err)
+    {
+    case SemanticError::NoError:
+        return;
+        break;
+    case SemanticError::UnknownType:
+        std::cout << "Семантическая ошибка: Неизвестный тип.";
+        break;
+    case SemanticError::AlreadyDeclared:
+        std::cout << "Семантическая ошибка: Переменная/Тип уже объявлен.";
+        break;
+    }
+
+    std::cout<< " Строка: " << lexer->GetLinePos() << ", символ: " << lexer->GetSymbolPos() << std::endl;
+}
+
+
+
+
+
+
+
+//------
+
 void CSyntax::GetNextNotEmptyToken()
 {
 
@@ -64,6 +101,8 @@ void CSyntax::skipToNextKeyword(KeyWords keyWord, std::set<KeyWords> l)
 void CSyntax::StartSyntaxAnalyze(std::string program)
 {
     lexer = new CLexer(program + ' ');
+    currentScope = new Scope();
+    currentScope = new Scope(currentScope);
     GetNextNotEmptyToken();
     Program();
 
@@ -127,23 +166,25 @@ void CSyntax::AcceptKeyword(KeyWords keyWord, followers cfollowers, std::set<Key
 
 }
 
-void CSyntax::AcceptIdent(followers cFollowers, std::set<KeyWords> new_followers)
+CIdentToken* CSyntax::AcceptIdent(followers cFollowers, std::set<KeyWords> new_followers)
 {
     cFollowers.l.insert(new_followers.begin(), new_followers.end());
 
+
     if (isSkipping)
-        return;
+        return NULL;
 
+    CIdentToken* retToken = NULL;
 
-    //CIdentToken* identToken = dynamic_cast<CIdentToken*>(currentToken.get());
     if (currentToken.get()->getType() != TokenType::ttIdent)
     {
-        //std::cout << "Ожидался идентификатор..." << std::endl;
         skipToNextKeyword(KeyWords::errIdent, cFollowers.l);
     }
     else
     {
+        
         std::cout << "ACCEPTED: ident("<< dynamic_cast<CIdentToken*>(currentToken.get())->GetValue() <<")"<< std::endl;
+        retToken = dynamic_cast<CIdentToken*>(currentToken.release());
     }
     if (!isSkipping)
         GetNextNotEmptyToken();
@@ -151,6 +192,7 @@ void CSyntax::AcceptIdent(followers cFollowers, std::set<KeyWords> new_followers
     {
         exit(0);
     }
+    return retToken;
 
 }
 
@@ -319,14 +361,17 @@ void CSyntax::TypeSection(followers cFollowers)
 void CSyntax::TypeDefinition(followers cFollowers)
 {
 
-    AcceptIdent(cFollowers,{KeyWords::semicolonSy,KeyWords::procedureSy,KeyWords::beginSy});
+    identQueue.push(AcceptIdent(cFollowers,{KeyWords::semicolonSy,KeyWords::procedureSy,KeyWords::beginSy}));
     AcceptKeyword(KeyWords::equalSy,cFollowers, {KeyWords::semicolonSy,KeyWords::procedureSy,KeyWords::beginSy});
+    CIdentToken* typeToken = AcceptIdent(cFollowers, {});
+    AddNewVariables(typeToken,UsageType::TYPE);
     //Type(); //Доделать
 
 }
 
 void CSyntax::VariableSection(followers cFollowers)
 {
+
     if (CheckKeyword(KeyWords::varSy))
     {
         AcceptKeyword(KeyWords::varSy, cFollowers, {KeyWords::procedureSy,KeyWords::beginSy,KeyWords::semicolonSy});
@@ -334,6 +379,7 @@ void CSyntax::VariableSection(followers cFollowers)
         AcceptKeyword(KeyWords::semicolonSy, cFollowers, {KeyWords::semicolonSy,KeyWords::beginSy,KeyWords::procedureSy});
         while (CheckIdent())
         {
+
             OneTypeVariableDefinition(cFollowers);
             AcceptKeyword(KeyWords::semicolonSy, cFollowers, {KeyWords::beginSy,KeyWords::procedureSy,KeyWords::semicolonSy});
         }
@@ -342,16 +388,20 @@ void CSyntax::VariableSection(followers cFollowers)
 
 void CSyntax::OneTypeVariableDefinition(followers cFollowers)
 {
+    //добавляем новые переменные
+    identQueue.push(AcceptIdent(cFollowers,{KeyWords::commaSy,KeyWords::semicolonSy,KeyWords::integerSy,KeyWords::realSy,
+        KeyWords::booleanSy,KeyWords::stringSy}));
 
-    AcceptIdent(cFollowers,{KeyWords::commaSy,KeyWords::semicolonSy,KeyWords::integerSy,KeyWords::realSy,
-        KeyWords::booleanSy,KeyWords::stringSy});
+
     while (CheckKeyword(KeyWords::commaSy))
     {
         AcceptKeyword();
-        AcceptIdent(cFollowers, { KeyWords::integerSy,KeyWords::realSy,KeyWords::stringSy,KeyWords::booleanSy,KeyWords::semicolonSy });
+        identQueue.push(AcceptIdent(cFollowers, { KeyWords::integerSy,KeyWords::realSy,KeyWords::stringSy,KeyWords::booleanSy,KeyWords::semicolonSy }));
     }
     AcceptKeyword(KeyWords::colonSy, cFollowers, {KeyWords::integerSy,KeyWords::realSy,KeyWords::stringSy,KeyWords::booleanSy,KeyWords::semicolonSy});
-    AcceptTypeKeywords();
+    CIdentToken* typeToken = AcceptIdent(cFollowers, {});
+    AddNewVariables(typeToken,UsageType::VAR);
+
 }
 //DO
 void CSyntax::ProcedureSection(followers cFollowers)

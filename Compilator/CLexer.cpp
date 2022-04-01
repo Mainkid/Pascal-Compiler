@@ -69,20 +69,20 @@
 			return std::make_unique<CKeywordToken>(KeyWords::downToSy);
 		else if (token == "procedure")
 			return std::make_unique<CKeywordToken>(KeyWords::procedureSy);
-		else if (token == "integer")
-			return std::make_unique<CKeywordToken>(KeyWords::integerSy);
-		else if (token == "string")
-			return std::make_unique<CKeywordToken>(KeyWords::stringSy);
-		else if (token == "real")
-			return std::make_unique<CKeywordToken>(KeyWords::realSy);
+		//else if (token == "integer")
+			//return std::make_unique<CKeywordToken>(KeyWords::integerSy);
+		//else if (token == "string")
+			//return std::make_unique<CKeywordToken>(KeyWords::stringSy);
+		//else if (token == "real")
+			//return std::make_unique<CKeywordToken>(KeyWords::realSy);
 		else if (token == ";")
 			return std::make_unique<CKeywordToken>(KeyWords::semicolonSy);
 		else if (token == "repeat")
 			return std::make_unique<CKeywordToken>(KeyWords::repeatSy);
 		else if (token == "until")
 			return std::make_unique<CKeywordToken>(KeyWords::untilSy);
-		else if (token == "boolean")
-			return std::make_unique<CKeywordToken>(KeyWords::booleanSy);
+		//else if (token == "boolean")
+			//return std::make_unique<CKeywordToken>(KeyWords::booleanSy);
 		else if (token == "case")
 			return std::make_unique<CKeywordToken>(KeyWords::caseSy);
 		else if (token == "of")

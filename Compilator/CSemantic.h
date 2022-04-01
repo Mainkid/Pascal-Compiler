@@ -22,6 +22,16 @@ enum class ClassType
 	ENUM
 };
 
+enum class SemanticError
+{
+	NoError,
+	UnknownType,
+	AlreadyDeclared
+};
+
+class CType;
+class CIdent;
+class Scope;
 
 class CType
 {
@@ -65,15 +75,14 @@ private:
 	std::set<CType*> typeSet;
 	std::map<std::string, CIdent*> identTable;
 	std::map<std::string, CType*> typeTable;
+	std::map<std::string, Scope*> procTable;
 
-	CIdent* trueIdent;
-	CIdent* falseIdent;
 
 public:
 	Scope(Scope* par)
 	{
 		parent = par;
-		ScopeInit();
+		//ScopeInit();
 	}
 
 	Scope()
@@ -96,6 +105,39 @@ public:
 		return new_ident;
 	}
 
+	CType* FindCType(std::string typeStr)
+	{
+		Scope* currentScope = this;
+		while (currentScope != NULL)
+		{
+			if (currentScope->typeTable.count(typeStr))
+				return currentScope->typeTable[typeStr];
+			else
+				currentScope = currentScope->parent;
+		}
+		return NULL;
+	}
+
+	SemanticError AddIdent(CIdentToken* ident, UsageType usageType, CIdentToken* typeStr)
+	{
+		CType* cType = FindCType(typeStr->GetValue());
+		if (!cType)
+			return SemanticError::UnknownType;
+		if (identTable.count(ident->GetValue())>0)
+			return SemanticError::AlreadyDeclared;
+		AddIdent(ident->GetValue(), usageType, cType);
+		return SemanticError::NoError;
+	}
+
+	Scope* AddProc(CIdentToken* ident)
+	{
+		AddIdent(ident->GetValue(), UsageType::PROC, NULL);
+		procTable[ident->GetValue()] = new Scope();
+		procTable[ident->GetValue()]->parent = this;
+	}
+	
+	
+
 	void AddConst(CType* type, CIdent* ident)
 	{
 		type->AddConstant(ident);
@@ -103,6 +145,7 @@ public:
 
 	void ScopeInit()
 	{
+		parent = NULL;
 		AddIdent("integer", UsageType::TYPE, AddType(ClassType::SCALAR));
 		AddIdent("real", UsageType::TYPE, AddType(ClassType::SCALAR));
 		AddIdent("string", UsageType::TYPE, AddType(ClassType::SCALAR)); //?????????????????????

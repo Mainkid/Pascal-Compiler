@@ -1,7 +1,10 @@
 
-
-program binCode;
+program firstone;
+type a=integer;
+b=real;
+c=b;
+m=c;
+c=b;
 begin
-binCode(f,(5-2));
-x:=2;
+x:=1
 end.

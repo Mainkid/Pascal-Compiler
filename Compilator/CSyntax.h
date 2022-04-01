@@ -3,9 +3,11 @@
 #include <iostream>
 #include "CLexer.h"
 #include "CLexer.h"
+#include "CSemantic.h"
 #include <list>
 #include <set>
 #include <iterator>
+#include <queue>
 
 typedef std::unique_ptr<CToken> CTokenPtr;
 
@@ -33,10 +35,15 @@ private:
 
 	bool isSkipping;
 	KeyWords skipToKeyWord;
+	Scope* currentScope;
+	std::queue <CIdentToken*> identQueue;
+
+	void AddNewVariables(CIdentToken*,UsageType);
+	void ThrowSemanticError(SemanticError);
 
 	void skipToNextKeyword(KeyWords, std::set<KeyWords>);
 	void Program();
-	void AcceptIdent(followers, std::set<KeyWords>);
+	CIdentToken* AcceptIdent(followers, std::set<KeyWords>);
 	void AcceptKeyword(KeyWords, followers,std::set<KeyWords>);
 	void AcceptKeyword();
 	void AcceptConst(followers, std::set<KeyWords>);
