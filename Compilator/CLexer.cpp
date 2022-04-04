@@ -18,12 +18,16 @@
 
 	
 	CTokenPtr CLexer::GetTokenType()
-	{	
-		std::string token = toLowerCase(currentToken);
+	{
+		std::string token;
+		if (!isQuotationOpened)
+			 token = toLowerCase(currentToken);
+		else
+			 token = currentToken;
 		prevToken = token;
 		currentToken = "";
 
-		if (currentPosition >= programText.length() - 1)
+		if (currentPosition >= programText.length())
 		{
 			if (ReadNextLine())
 				std::cout << std::endl;
@@ -32,7 +36,7 @@
 		if (token == "\"")
 		{
 			
-			return std::make_unique<CKeywordToken>(KeyWords::quoteSy);
+			return std::make_unique<CKeywordToken>(KeyWords::emptyValueSy);
 		}
 		else if (isQuotationOpened)
 		{
@@ -169,17 +173,17 @@
 				return std::make_unique<CIdentToken>(token);
 			else if (errType == LexicalError::incorrectIdentifier)
 			{
-				errorList += "Некорректный идентификатор (Строка: " + std::to_string(currentLine+1) + ", Позиция: " + std::to_string(currentPosition+1 - token.length()) + ")\n";
+				errorList += "Incorrect Identifier (Line: " + std::to_string(currentLine+1) + ", Pos: " + std::to_string(currentPosition+1 - token.length()) + ")\n";
 				return std::make_unique<CKeywordToken>(KeyWords::errorValueSy);
 			}
 			else if (errType == LexicalError::incorrectRealValue)
 			{
-				errorList += "Некорректное значение вещественного типа (Строка: " + std::to_string(currentLine+1) + ", Позиция: " + std::to_string(currentPosition+1 - token.length()) + ")\n";
+				errorList += "Incorrect value of real type (Line: " + std::to_string(currentLine+1) + ", Pos: " + std::to_string(currentPosition+1 - token.length()) + ")\n";
 				return std::make_unique<CKeywordToken>(KeyWords::errorValueSy);
 			}
 			else if (errType == LexicalError::unknownCharacter)
 			{
-				errorList += "Неизвестный символ (Строка: " + std::to_string(currentLine+1) + ", Позиция: " + std::to_string(currentPosition+1 - token.length()) + ")\n";
+				errorList += "Unknown Symbol (Line: " + std::to_string(currentLine+1) + ", Pos: " + std::to_string(currentPosition+1 - token.length()) + ")\n";
 				return std::make_unique<CKeywordToken>(KeyWords::errorValueSy);
 			}
 			return GetNextToken();
@@ -256,6 +260,11 @@
 	bool CLexer::IsBoolean(std::string token)
 	{
 		return token == "true" || token == "false";
+	}
+
+	bool CLexer::IsString(std::string token)
+	{
+		return isQuotationOpened;
 	}
 
 
@@ -354,7 +363,7 @@
 			std::cout << errorList << std::endl;
 
 			if (isQuotationOpened)
-				std::cout << "Кавычки не закрыты" << std::endl;
+				std::cout << "Quatations are not closed" << std::endl;
 
 			return nullptr;
 		}

@@ -34,24 +34,32 @@ public:
 private:
 
 	bool isSkipping;
+	int semErrPos=-1;
+	int semErrLine=-1;
+
+
 	KeyWords skipToKeyWord;
 	Scope* currentScope;
 	std::queue <CIdentToken*> identQueue;
 
 	void AddNewVariables(CIdentToken*,UsageType);
 	void ThrowSemanticError(SemanticError);
+	CType* GetCType(CIdentToken*);
+	CType* CheckSemantic(CType* t1, CType* t2);
+	CType* CheckAssignSemantic(CType*, CType*);
 
 	void skipToNextKeyword(KeyWords, std::set<KeyWords>);
 	void Program();
 	CIdentToken* AcceptIdent(followers, std::set<KeyWords>);
 	void AcceptKeyword(KeyWords, followers,std::set<KeyWords>);
 	void AcceptKeyword();
-	void AcceptConst(followers, std::set<KeyWords>);
+	CType* AcceptConst(followers, std::set<KeyWords>);
 	bool CheckConst();
 	bool CheckKeyword(KeyWords);
 	bool CheckIdent();
 	void SkipToKeyWord(KeyWords);
 	void GetNextNotEmptyToken();
+	std::string GetConstType(std::string);
 	
 	void PrintError(bool,int, int);
 	void PrintError(KeyWords, int, int);
@@ -72,20 +80,20 @@ private:
 	void UnmarkedOperator(followers);
 	void SimpleOperator(followers);
 	void ComplexOperator(followers);
-	void AssignOperator(followers);
+	CType* AssignOperator(followers);
 	void ProcedureOperator(followers);
-	void Expression(followers);
-	void SimpleExpression(followers);
-	void Term(followers);
-	void Multiplier(followers);
+	CType* Expression(followers);
+	CType* SimpleExpression(followers);
+	CType* Term(followers);
+	CType* Multiplier(followers);
 
 	void ChoosingOperator(followers);
 	void CycleOperator(followers);
 	void IfOperator(followers); //!
 	void ChoiseOperator(followers);
 	
-	void VariantListElement(followers);
-	void ListVariantLabels(followers);
+	CType* VariantListElement(followers);
+	CType* ListVariantLabels(followers);
 
 	void ProcedureDescription(followers);
 	void ProcedureHeader(followers);

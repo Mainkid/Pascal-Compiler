@@ -27,25 +27,92 @@ void CSyntax::AddNewVariables(CIdentToken* type, UsageType usageType)
 
 void CSyntax::ThrowSemanticError(SemanticError err)
 {
+
+    if (isSkipping)
+        return;
+
     switch (err)
     {
     case SemanticError::NoError:
         return;
         break;
     case SemanticError::UnknownType:
-        std::cout << "Семантическая ошибка: Неизвестный тип.";
+        std::cout << "Semantic Error: Unknown type.";
         break;
     case SemanticError::AlreadyDeclared:
-        std::cout << "Семантическая ошибка: Переменная/Тип уже объявлен.";
+        std::cout << "Semantic Error: Var/Type is already declared.";
+        break;
+    case SemanticError::IncompatibleTypes:
+        std::cout << "Semantic Error: Incompatable type.";
         break;
     }
 
-    std::cout<< " Строка: " << lexer->GetLinePos() << ", символ: " << lexer->GetSymbolPos() << std::endl;
+    
+    if (semErrLine!=-1)
+        std::cout<< " Line: " << semErrLine << ", Pos: " << semErrPos << std::endl;
+    else
+        std::cout << " Line: " << lexer->GetLinePos() << ", Pos: " << lexer->GetSymbolPos() << std::endl;
+    semErrLine = -1;
+    semErrPos = -1;
 }
 
+CType* CSyntax::GetCType(CIdentToken* tok)
+{
+    if (!isSkipping &&currentScope->FindCType(tok->GetValue())==currentScope->nullType)
+        ThrowSemanticError(SemanticError::UnknownType);
+    
+    return currentScope->FindCType(tok->GetValue());
+}
 
+CType* CSyntax::CheckSemantic(CType* t1, CType* t2)
+{
+    
+    
+    if (t1 == t2)
+        return t1;
+    else if (t1 == currentScope->FindCType("real") && t2 == currentScope->FindCType("integer"))
+        return t1;
+    else if (t1 == currentScope->FindCType("integer") && t2 == currentScope->FindCType("real"))
+        return t2;
+    else if (t1 == NULL)
+        return t2;
+    else if (t2 == NULL)
+        return t1;
+    else
+    {
+        if (semErrLine == -1)
+        {
+            semErrLine = lexer->GetLinePos();
+            semErrPos = lexer->GetSymbolPos();
+        }
+        return currentScope->nullType;
 
+    }
 
+}
+
+CType* CSyntax::CheckAssignSemantic(CType* t1, CType* t2)
+{
+    if (t1 == t2)
+        return t1;
+    else if (t1 == currentScope->FindCType("real") && t2 == currentScope->FindCType("integer"))
+        return t1;
+    else if (t1 == currentScope->FindCType("integer") && t2 == currentScope->FindCType("real"))
+        return currentScope->nullType;
+    else if (t1 == NULL)
+        return t2;
+    else if (t2 == NULL)
+        return t1;
+    else
+    {
+        if (semErrLine == -1)
+        {
+            semErrLine = lexer->GetLinePos();
+            semErrPos = lexer->GetSymbolPos();
+        }
+        return currentScope->nullType;
+    }
+}
 
 
 
@@ -55,10 +122,25 @@ void CSyntax::GetNextNotEmptyToken()
 {
 
     currentToken = move(lexer->GetNextToken());
+
     while (currentToken&& currentToken.get()->getType() == TokenType::ttKeyword && dynamic_cast<CKeywordToken*>(currentToken.get())->GetValue() == KeyWords::emptyValueSy)
     {
         currentToken = move(lexer->GetNextToken());
     }
+}
+
+std::string CSyntax::GetConstType(std::string constStr)
+{
+    if (lexer->IsBoolean(constStr))
+        return "boolean";
+    else if (lexer->IsInteger(constStr))
+        return "integer";
+    else if (lexer->IsReal(constStr))
+        return "real";
+    else if (lexer->IsString(constStr))
+        return "string";
+    else
+        return "err";
 }
 
 void CSyntax::skipToNextKeyword(KeyWords keyWord, std::set<KeyWords> l)
@@ -73,6 +155,8 @@ void CSyntax::skipToNextKeyword(KeyWords keyWord, std::set<KeyWords> l)
     while (currentToken && !isSkipping)
     {
         GetNextNotEmptyToken();
+        if (!currentToken)
+            exit(0);
         for (it = l.begin(); it != l.end(); ++it)
         {
             if (currentToken.get()->getType() == TokenType::ttKeyword && *it == dynamic_cast<CKeywordToken*>(currentToken.get())->GetValue())
@@ -103,9 +187,9 @@ void CSyntax::StartSyntaxAnalyze(std::string program)
     lexer = new CLexer(program + ' ');
     currentScope = new Scope();
     currentScope = new Scope(currentScope);
-    GetNextNotEmptyToken();
-    Program();
-
+        GetNextNotEmptyToken();
+        Program();
+    std::cout << "Completed!";
 }
 
 void CSyntax::AcceptKeyword()
@@ -224,11 +308,14 @@ void CSyntax::AcceptTypeKeywords()
     }
 }
 
-void CSyntax::AcceptConst(followers cFollowers, std::set<KeyWords> KeyWords)
+CType* CSyntax::AcceptConst(followers cFollowers, std::set<KeyWords> KeyWords)
 {
     cFollowers.l.insert(KeyWords.begin(), KeyWords.end());
     if (isSkipping)
-        return;
+        return currentScope->nullType;
+
+    CType* retCType = currentScope->nullType;
+
     if (currentToken.get()->getType() != TokenType::ttConst)
     {
         skipToNextKeyword(KeyWords::errConst, cFollowers.l);
@@ -236,12 +323,14 @@ void CSyntax::AcceptConst(followers cFollowers, std::set<KeyWords> KeyWords)
     else
     {
         std::cout << "ACCEPTED: const(" << dynamic_cast<CConstToken*>(currentToken.get())->ToString() <<")"<< std::endl;
+        retCType =currentScope->FindCType(GetConstType(dynamic_cast<CConstToken*>(currentToken.get())->ToString()));
     }
     GetNextNotEmptyToken();
     if (!currentToken)
     {
         exit(0);
     }
+    return retCType;
 }
 
 bool CSyntax::CheckConst()
@@ -300,22 +389,22 @@ void CSyntax::SkipToKeyWord(KeyWords keyWord)
 void CSyntax::PrintError(bool isConst, int line, int pos)
 {
     if (!isConst)
-        std::cout << "ERROR: Ожидался идентификатор" << ". Строка: " << line << ", символ: " << pos<< std::endl;
+        std::cout << "ERROR: Identifier expected" << ". Line: " << line << ", Pos: " << pos<< std::endl;
     else
-        std::cout << "ERROR: Ожидалась константа" << ". Строка: " << line << ", символ: " << pos << std::endl;
+        std::cout << "ERROR: Const expected" << ". Line: " << line << ", Pos: " << pos << std::endl;
 }
 
 void CSyntax::PrintError(KeyWords keyword,int line, int pos)
 {
 
-    std::cout << "ERROR: Ожидалось ключевое слово " <<static_cast<int>(keyword) <<". Строка: "<<line<<", символ: "<<pos<< std::endl;
+    std::cout << "ERROR: Keyword expected " <<static_cast<int>(keyword) <<". Line: "<<line<<", Pos: "<<pos<< std::endl;
 
 }
 
 void CSyntax::PrintError(Constructions construction, int line, int pos)
 {
 
-    std::cout << "ERROR: Ожидалась конструкция " << static_cast<int>(construction) << ". Строка: " << line << ", символ: " << pos << std::endl;
+    std::cout << "ERROR: Construction expected " << static_cast<int>(construction) << ". Line: " << line << ", Pos: " << pos << std::endl;
 
 }
 
@@ -454,72 +543,88 @@ void CSyntax::UnmarkedOperator(followers cFollowers)
 //TODO: Необходимо рассмотреть процедуру!
 void CSyntax::SimpleOperator(followers cFollowers)
 {
-    
-    AcceptIdent(cFollowers, { KeyWords::assignSy,KeyWords::semicolonSy });
+    CType* t1=NULL;
+    CType* t2=NULL;
+    t1=GetCType(AcceptIdent(cFollowers, { KeyWords::assignSy,KeyWords::semicolonSy }));
     if (CheckKeyword(KeyWords::assignSy))
-        AssignOperator(cFollowers);
+        t2=AssignOperator(cFollowers);
     else if (CheckKeyword(KeyWords::bracketOpenSy))
+    {
         ProcedureOperator(cFollowers);
+        return;
+    }
     else
         return;
-    //if (AssignOperator(true))
-    //AssignOperator( cFollowers);
-    //else
-        //ProcedureOperator(false);
-    //return true;
+
+    if (CheckAssignSemantic(t1, t2) == currentScope->nullType)
+        ThrowSemanticError(SemanticError::IncompatibleTypes);
+    
 
 
     
 }
 
 //Поправка на процедуру!!!
-void CSyntax::AssignOperator(followers cFollowers)
+CType* CSyntax::AssignOperator(followers cFollowers)
 {
 
     AcceptKeyword(KeyWords::assignSy,cFollowers,{KeyWords::semicolonSy});
-    Expression(cFollowers);
+    return Expression(cFollowers);
 
 }
 
-void CSyntax::Expression(followers cFollowers)
+CType* CSyntax::Expression(followers cFollowers)
 {
-    SimpleExpression(cFollowers);
+    CType* t1 = NULL;
+    CType* t2 = NULL;
+
+    t1=SimpleExpression(cFollowers);
     if (CheckKeyword(KeyWords::equalSy) || CheckKeyword(KeyWords::lessEqualSy) || CheckKeyword(KeyWords::lessSy) ||
-        CheckKeyword(KeyWords::moreEqualSy) || CheckKeyword(KeyWords::moreSy) || CheckKeyword(KeyWords::inSy))
+        CheckKeyword(KeyWords::moreEqualSy) || CheckKeyword(KeyWords::moreSy) || CheckKeyword(KeyWords::inSy)||CheckKeyword(KeyWords::notEqualSy))
     {
-        AcceptKeyword(); 
-        SimpleExpression(cFollowers);
+        AcceptKeyword();
+        t2 = SimpleExpression(cFollowers);
+        if (CheckSemantic(t1, t2) != currentScope->nullType)
+            return currentScope->FindCType("boolean");
+        else return currentScope->nullType;
     }
+    return t1;
 
 }
 
-void CSyntax::SimpleExpression(followers cFollowers)
+CType* CSyntax::SimpleExpression(followers cFollowers)
 {
-    //
-    //if (CheckKeyword(KeyWords::plusSy))
-        //AcceptKeyword(KeyWords::plusSy);
-    //else if (CheckKeyword(KeyWords::minusSy))
-        //AcceptKeyword(KeyWords::minusSy);
-    Term(cFollowers);
+    
+    CType* t1 = NULL;
+    CType* t2 = NULL;
+
+    t1=Term(cFollowers);
     while (CheckKeyword(KeyWords::orSy) || CheckKeyword(KeyWords::plusSy) || CheckKeyword(KeyWords::minusSy))
     {
         AcceptKeyword(); 
-        Term(cFollowers);
+        t2=Term(cFollowers);
+        t1=CheckSemantic(t1, t2);
     }
+    return t1;
 }
 
-void CSyntax::Term(followers cFollowers)
+CType* CSyntax::Term(followers cFollowers)
 {
-    Multiplier(cFollowers);
+    CType* t1 = NULL;
+    CType* t2 = NULL;
+    
+    t1=Multiplier(cFollowers);
     while (CheckKeyword(KeyWords::multiplySy) || CheckKeyword(KeyWords::divisionSy) || CheckKeyword(KeyWords::modSy) ||
         CheckKeyword(KeyWords::divSy) || CheckKeyword(KeyWords::andSy))
     {
         AcceptKeyword();
-        Multiplier(cFollowers);
+        t2=Multiplier(cFollowers);
+        t1 = CheckSemantic(t1, t2);
     }
+    return t1;
 }
 
-void CSyntax::Multiplier(followers cFollowers)
+CType* CSyntax::Multiplier(followers cFollowers)
 {
     cFollowers.l.insert(KeyWords::minusSy);
     cFollowers.l.insert(KeyWords::multiplySy);
@@ -527,29 +632,35 @@ void CSyntax::Multiplier(followers cFollowers)
     cFollowers.l.insert(KeyWords::modSy);
     cFollowers.l.insert(KeyWords::divSy);
     cFollowers.l.insert(KeyWords::andSy);
+    CType* ctype = NULL;
 
 
     if (CheckKeyword(KeyWords::notSy))
     {
         AcceptKeyword();
-        Multiplier(cFollowers);
+        return Multiplier(cFollowers);
     }
     else if (CheckKeyword(KeyWords::bracketOpenSy))
     {
         AcceptKeyword();
-        Expression(cFollowers);
+        ctype=Expression(cFollowers);
         AcceptKeyword(KeyWords::bracketCloseSy,cFollowers,{KeyWords::semicolonSy});
+        return ctype;
     }
     else if (CheckIdent())
     {
-        AcceptIdent(cFollowers, {});
+        return GetCType(AcceptIdent(cFollowers, {}));
     }
     else if (CheckConst())
     {
-        AcceptConst(cFollowers, {});
+
+           return AcceptConst(cFollowers, {});
     }
     else
-        return;
+    {
+        PrintError(false, lexer->GetLinePos(), lexer->GetSymbolPos());
+        return currentScope->nullType;
+    }
 }
 
 void CSyntax::ProcedureOperator(followers cFollowers)
@@ -585,7 +696,10 @@ void CSyntax::ComplexOperator(followers cFollower)
     else if (CheckKeyword(KeyWords::whileSy))
         CycleOperator(cFollower);
     else
+    {
+        //PrintError(Constructions::no, lexer->GetLinePos(), lexer->GetSymbolPos());
         return;
+    }
 
 
 
@@ -600,13 +714,19 @@ void CSyntax::ChoosingOperator(followers cFollowers)
     else if (CheckKeyword(KeyWords::caseSy))
         ChoiseOperator(cFollowers);
     else
+    {
+        PrintError(Constructions::no, lexer->GetLinePos(), lexer->GetSymbolPos());
         return;
+    }
 }
 
 void CSyntax::CycleOperator(followers cFollowers)
 {
     AcceptKeyword(KeyWords::whileSy, cFollowers, { KeyWords::doSy,KeyWords::semicolonSy,KeyWords::bracketOpenSy });
-    Expression(cFollowers);
+    
+    CType* tmp = Expression(cFollowers);
+    if ( tmp!= currentScope->FindCType("boolean"))
+        ThrowSemanticError(SemanticError::IncompatibleTypes);
     AcceptKeyword(KeyWords::doSy,cFollowers,{KeyWords::semicolonSy});
     UnmarkedOperator(cFollowers);
 }
@@ -615,7 +735,9 @@ void CSyntax::IfOperator(followers cFollowers)
 {
 
     AcceptKeyword(KeyWords::ifSy,cFollowers,{KeyWords::thenSy,KeyWords::elseSy,KeyWords::semicolonSy});
-    Expression(cFollowers);
+    CType* tmp = Expression(cFollowers);
+    if(tmp != currentScope->FindCType("boolean"))
+        ThrowSemanticError(SemanticError::IncompatibleTypes);
     AcceptKeyword(KeyWords::thenSy,cFollowers,{KeyWords::elseSy,KeyWords::semicolonSy});
     UnmarkedOperator(cFollowers);
     if (CheckKeyword(KeyWords::elseSy))
@@ -627,39 +749,55 @@ void CSyntax::IfOperator(followers cFollowers)
 
 void CSyntax::ChoiseOperator(followers cFollowers)
 {
-
+    CType* t1 = NULL;
+    CType* t2 = NULL;
     AcceptKeyword(KeyWords::caseSy,cFollowers,{KeyWords::ofSy,KeyWords::semicolonSy});
-    Expression(cFollowers);
+    t1=Expression(cFollowers);
     AcceptKeyword(KeyWords::ofSy,cFollowers,{KeyWords::semicolonSy});
-    VariantListElement(cFollowers);
+    t2=VariantListElement(cFollowers);
     while (CheckKeyword(KeyWords::semicolonSy))
     {
+        //if (t2==currentScope->nullType)
+          //  ThrowSemanticError(SemanticError::)
+        if (CheckAssignSemantic(t1, t2) == currentScope->nullType)
+            ThrowSemanticError(SemanticError::IncompatibleTypes);
+        
         AcceptKeyword();
-        VariantListElement(cFollowers);
+        t2=VariantListElement(cFollowers);
+        
     }
+    if (CheckAssignSemantic(t1, t2) == currentScope->nullType)
+        ThrowSemanticError(SemanticError::IncompatibleTypes);
     AcceptKeyword(KeyWords::endSy,cFollowers,{KeyWords::colonSy,KeyWords::endSy});
 
 }
 
-void CSyntax::VariantListElement(followers cFollowers)
+CType* CSyntax::VariantListElement(followers cFollowers)
 {
+    CType* ret = NULL;
     if (CheckConst())
-        ListVariantLabels(cFollowers);
+        ret=ListVariantLabels(cFollowers);
     else
-        return;
+        return NULL;
     AcceptKeyword(KeyWords::colonSy, cFollowers, {});
     Operator(cFollowers);
+    return ret;
 }
 
-void CSyntax::ListVariantLabels(followers cFollowers)
+CType* CSyntax::ListVariantLabels(followers cFollowers)
 {
-
-    AcceptConst(cFollowers,{KeyWords::commaSy});
+    CType* t1 = NULL;
+    CType* t2 = NULL;
+    t1=AcceptConst(cFollowers,{KeyWords::commaSy});
     while (CheckKeyword(KeyWords::commaSy))
     {
+        t1=CheckSemantic(t1, t2);
         AcceptKeyword();
-        AcceptConst(cFollowers, { KeyWords::commaSy });
+        t2=AcceptConst(cFollowers, { KeyWords::commaSy });
+        
     }
+    return CheckSemantic(t1, t2);
+    
 }
 
 

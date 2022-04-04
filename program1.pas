@@ -1,10 +1,8 @@
-
-program firstone;
-type a=integer;
-b=real;
-c=b;
-m=c;
-c=b;
+program firstOne;
+var x:integer;
 begin
-x:=1
+while(x<10) do
+begin
+x:="qeq"+1;
+end
 end.

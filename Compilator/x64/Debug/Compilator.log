@@ -1,4 +1,4 @@
-﻿  CSyntax.cpp
-  Compilator.cpp
-  Создание кода...
+﻿  CLexer.cpp
+C:\Users\jdczy\source\repos\Compilator\Compilator\CLexer.cpp(400,47): warning C4267: инициализация: преобразование из "size_t" в "int"; возможна потеря данных
+C:\Users\jdczy\source\repos\Compilator\Compilator\CLexer.cpp(402,47): warning C4267: return: преобразование из "size_t" в "int"; возможна потеря данных
   Compilator.vcxproj -> C:\Users\jdczy\source\repos\Compilator\x64\Debug\Compilator.exe

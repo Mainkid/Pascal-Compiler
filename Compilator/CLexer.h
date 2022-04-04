@@ -27,6 +27,7 @@ public:
 	bool IsReal(std::string);
 	bool IsInteger(std::string);
 	bool IsBoolean(std::string);
+	bool IsString(std::string);
 	int GetLinePos();
 	int GetSymbolPos();
 	LexicalError IsIdentifier(std::string);

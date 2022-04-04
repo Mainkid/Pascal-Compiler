@@ -19,14 +19,16 @@ enum class UsageType
 enum class ClassType
 {
 	SCALAR,
-	ENUM
+	ENUM,
+	NULLTYPE
 };
 
 enum class SemanticError
 {
 	NoError,
 	UnknownType,
-	AlreadyDeclared
+	AlreadyDeclared,
+	IncompatibleTypes
 };
 
 class CType;
@@ -79,9 +81,13 @@ private:
 
 
 public:
+
+	CType* nullType=nullptr;
+
 	Scope(Scope* par)
 	{
 		parent = par;
+		nullType = parent->nullType;
 		//ScopeInit();
 	}
 
@@ -115,6 +121,19 @@ public:
 			else
 				currentScope = currentScope->parent;
 		}
+		return nullType;
+	}
+
+	CIdent* FindCIdent(std::string identStr)
+	{
+		Scope* currentScope = this;
+		while (currentScope != NULL)
+		{
+			if (currentScope->identTable.count(identStr))
+				return currentScope->identTable[identStr];
+			else
+				currentScope = currentScope->parent;
+		}
 		return NULL;
 	}
 
@@ -143,14 +162,18 @@ public:
 		type->AddConstant(ident);
 	}
 
+	
+
 	void ScopeInit()
 	{
 		parent = NULL;
+		nullType = AddType(ClassType::NULLTYPE);
+
 		AddIdent("integer", UsageType::TYPE, AddType(ClassType::SCALAR));
 		AddIdent("real", UsageType::TYPE, AddType(ClassType::SCALAR));
 		AddIdent("string", UsageType::TYPE, AddType(ClassType::SCALAR)); //?????????????????????
 		AddIdent("boolean", UsageType::TYPE, AddType(ClassType::ENUM));
-
+		
 
 
 		AddConst(typeTable["boolean"], AddIdent("true", UsageType::CONST, typeTable["boolean"]));

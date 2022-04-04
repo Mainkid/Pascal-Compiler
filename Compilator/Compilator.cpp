@@ -4,7 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include "CLexer.h"
+#include "CLexer.h" 
 #include "CToken.h"
 #include "CVariant.h"
 #include "CSyntax.h"
@@ -13,9 +13,11 @@
 #include <memory>
 
 using namespace std;
-//TODO: Дописать парсинг комментариев
+//TODO LEXER: Дописать парсинг комментариев
+//TODO LEXER: Обработка не равно
+//TODO LEXER: Регистр строки
 //Для всех токенов сделать метод для получения значений
-//TODO SYNTAX: Секция типов доделать
+
 //TODO SYNTAX: Добавить WriteLN
 
 
@@ -54,7 +56,8 @@ void testLexer()
 int main()
 {
     
-    setlocale(0, "");
+    //setlocale(0, "");
+    std::setlocale(LC_NUMERIC, "POSIX");
     //testLexer();
     
 
