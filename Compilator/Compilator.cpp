@@ -13,12 +13,12 @@
 #include <memory>
 
 using namespace std;
-//TODO LEXER: Дописать парсинг комментариев
-//TODO LEXER: Обработка не равно
-//TODO LEXER: Регистр строки
-//Для всех токенов сделать метод для получения значений
 
+//TODO LEXER: Дописать парсинг комментариев
+//TODO LEXER: Регистр строки
 //TODO SYNTAX: Добавить WriteLN
+
+
 
 
 

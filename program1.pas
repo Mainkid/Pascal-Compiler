@@ -1,8 +1,12 @@
 program firstOne;
-var x:integer;
+var x,z:real;
+q:integer;
+procedure fun(q:integer);
+var y:real;
 begin
-while(x<10) do
+y:=1;
+end;
+
 begin
-x:="qeq"+1;
-end
+fun (q)
 end.

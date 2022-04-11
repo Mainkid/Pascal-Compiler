@@ -42,11 +42,13 @@ private:
 	Scope* currentScope;
 	std::queue <CIdentToken*> identQueue;
 
+	void AddNewProcIdent(CIdentToken*);
 	void AddNewVariables(CIdentToken*,UsageType);
 	void ThrowSemanticError(SemanticError);
 	CType* GetCType(CIdentToken*);
 	CType* CheckSemantic(CType* t1, CType* t2);
 	CType* CheckAssignSemantic(CType*, CType*);
+
 
 	void skipToNextKeyword(KeyWords, std::set<KeyWords>);
 	void Program();
@@ -70,9 +72,9 @@ private:
 	void TypeDefinition(followers);
 	void VariableSection(followers);
 	void OneTypeVariableDefinition(followers);
-	void AcceptTypeKeywords();
+	CIdentToken* AcceptTypeKeywords();
 	void ProcedureSection(followers);
-	void FactParameter(followers);
+	void FactParameter(followers,std::string);
 
 	void OperatorSection(followers);
 	void ComposeOperator(followers);
@@ -81,7 +83,7 @@ private:
 	void SimpleOperator(followers);
 	void ComplexOperator(followers);
 	CType* AssignOperator(followers);
-	void ProcedureOperator(followers);
+	void ProcedureOperator(followers, std::string);
 	CType* Expression(followers);
 	CType* SimpleExpression(followers);
 	CType* Term(followers);
@@ -97,10 +99,12 @@ private:
 
 	void ProcedureDescription(followers);
 	void ProcedureHeader(followers);
-	void FormalOperatorsSection(followers);
+	void FormalOperatorsSection(followers,std::string);
+	void ParametersGroup(followers,std::string);
 	void ParametersGroup(followers);
-
 	
+
+	void AddNewVariablesToBrackets(CIdentToken*, std::string);
 	CTokenPtr currentToken=nullptr;
 	CLexer* lexer=nullptr;
 

@@ -28,7 +28,8 @@ enum class SemanticError
 	NoError,
 	UnknownType,
 	AlreadyDeclared,
-	IncompatibleTypes
+	IncompatibleTypes,
+	WrongParametersValue
 };
 
 class CType;
@@ -42,15 +43,8 @@ private:
 	std::set<CIdent*> constants;
 
 public:
-	CType(ClassType classTypeParam)
-	{
-		classType = classTypeParam;
-	}
-
-	void AddConstant(CIdent* curConst)
-	{
-		constants.insert(curConst);
-	}
+	CType(ClassType classTypeParam);
+	void AddConstant(CIdent* curConst);
 
 };
 
@@ -62,12 +56,8 @@ private:
 	UsageType usageType;
 
 public:
-	CIdent(std::string nameParam,UsageType usageTypeParam, CType* cTypeParam)
-	{
-		name = nameParam;
-		usageType = usageTypeParam;
-		cType = cTypeParam;
-	}
+	CIdent(std::string, UsageType, CType*);
+	
 };
 
 class Scope
@@ -78,105 +68,48 @@ private:
 	std::map<std::string, CIdent*> identTable;
 	std::map<std::string, CType*> typeTable;
 	std::map<std::string, Scope*> procTable;
+	std::map<std::string, std::list<CType*>> procParam;
 
 
 public:
 
-	CType* nullType=nullptr;
+	CType* nullType = nullptr;
 
-	Scope(Scope* par)
-	{
-		parent = par;
-		nullType = parent->nullType;
-		//ScopeInit();
-	}
+	Scope(Scope* par);
 
-	Scope()
-	{
-		ScopeInit();
-	}
 
-	CType* AddType(ClassType classType)
-	{
-		CType* new_type = new CType(classType);
-		typeSet.insert(new_type);
-		return new_type;
-	}
+	Scope();
 
-	CIdent* AddIdent(std::string typeStr, UsageType usageType, CType* cType)
-	{
-		typeTable[typeStr] = cType;
-		CIdent* new_ident = new CIdent(typeStr, usageType, cType);
-		identTable[typeStr] = new_ident;
-		return new_ident;
-	}
+	void AddParameter(CType*, std::string );
 
-	CType* FindCType(std::string typeStr)
-	{
-		Scope* currentScope = this;
-		while (currentScope != NULL)
-		{
-			if (currentScope->typeTable.count(typeStr))
-				return currentScope->typeTable[typeStr];
-			else
-				currentScope = currentScope->parent;
-		}
-		return nullType;
-	}
+	CType* AddType(ClassType);
 
-	CIdent* FindCIdent(std::string identStr)
-	{
-		Scope* currentScope = this;
-		while (currentScope != NULL)
-		{
-			if (currentScope->identTable.count(identStr))
-				return currentScope->identTable[identStr];
-			else
-				currentScope = currentScope->parent;
-		}
-		return NULL;
-	}
-
-	SemanticError AddIdent(CIdentToken* ident, UsageType usageType, CIdentToken* typeStr)
-	{
-		CType* cType = FindCType(typeStr->GetValue());
-		if (!cType)
-			return SemanticError::UnknownType;
-		if (identTable.count(ident->GetValue())>0)
-			return SemanticError::AlreadyDeclared;
-		AddIdent(ident->GetValue(), usageType, cType);
-		return SemanticError::NoError;
-	}
-
-	Scope* AddProc(CIdentToken* ident)
-	{
-		AddIdent(ident->GetValue(), UsageType::PROC, NULL);
-		procTable[ident->GetValue()] = new Scope();
-		procTable[ident->GetValue()]->parent = this;
-	}
-	
+	CIdent* AddIdent(std::string, UsageType, CType*);
 	
 
-	void AddConst(CType* type, CIdent* ident)
-	{
-		type->AddConstant(ident);
-	}
+	CType* FindCType(std::string);
 
-	
+	CIdent* FindCIdent(std::string);
 
-	void ScopeInit()
-	{
-		parent = NULL;
-		nullType = AddType(ClassType::NULLTYPE);
+	SemanticError AddIdent(CIdentToken*, UsageType, CIdentToken*);
 
-		AddIdent("integer", UsageType::TYPE, AddType(ClassType::SCALAR));
-		AddIdent("real", UsageType::TYPE, AddType(ClassType::SCALAR));
-		AddIdent("string", UsageType::TYPE, AddType(ClassType::SCALAR)); //?????????????????????
-		AddIdent("boolean", UsageType::TYPE, AddType(ClassType::ENUM));
-		
+	SemanticError AddProc(CIdentToken*);
 
 
-		AddConst(typeTable["boolean"], AddIdent("true", UsageType::CONST, typeTable["boolean"]));
-		AddConst(typeTable["boolean"], AddIdent("false", UsageType::CONST, typeTable["boolean"]));
-	}
+
+	//ѕроверить тип с текущим типом
+	//ѕосмотреть, больше ли параметров или меньше
+	SemanticError CheckProcedureParameters(int, CType*, std::string);
+
+	SemanticError CheckProcParametersAmount(int, std::string);
+
+
+	void AddConst(CType*, CIdent*);
+
+
+
+	void ScopeInit();
+
+
+
 };

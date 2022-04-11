@@ -1,5 +1,6 @@
 VAR    shirina,tol,pl   :Integer;
         visota,V   :Real;
+	s
 BEGIN
         shirina:=8;   
         tol:=5;  

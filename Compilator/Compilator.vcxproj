@@ -141,6 +141,7 @@
   <ItemGroup>
     <ClCompile Include="CLexer.cpp" />
     <ClCompile Include="Compilator.cpp" />
+    <ClCompile Include="CSemantic.cpp" />
     <ClCompile Include="CSyntax.cpp" />
     <ClCompile Include="CToken.cpp" />
     <ClCompile Include="CVariant.cpp" />
