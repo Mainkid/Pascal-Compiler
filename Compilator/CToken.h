@@ -67,6 +67,7 @@ enum class KeyWords {
 	bracketOpenSy,
 	bracketCloseSy,
 	colonSy,
+	writeLN,
 
 	errIdent,
 	errConst

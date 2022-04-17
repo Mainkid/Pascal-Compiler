@@ -73,6 +73,8 @@
 			return std::make_unique<CKeywordToken>(KeyWords::downToSy);
 		else if (token == "procedure")
 			return std::make_unique<CKeywordToken>(KeyWords::procedureSy);
+		else if (token == "writeln")
+			return std::make_unique<CKeywordToken>(KeyWords::writeLN);
 		//else if (token == "integer")
 			//return std::make_unique<CKeywordToken>(KeyWords::integerSy);
 		//else if (token == "string")

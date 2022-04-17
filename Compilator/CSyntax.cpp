@@ -592,7 +592,7 @@ void CSyntax::Operator(followers cFollowers)
 
 void CSyntax::UnmarkedOperator(followers cFollowers)
 {
-    if (CheckIdent())
+    if (CheckIdent()||CheckKeyword(KeyWords::writeLN))
         SimpleOperator(cFollowers);
     else if (CheckKeyword(KeyWords::beginSy) || CheckKeyword(KeyWords::ifSy)
         || CheckKeyword(KeyWords::caseSy) || CheckKeyword(KeyWords::whileSy))
@@ -606,34 +606,48 @@ void CSyntax::SimpleOperator(followers cFollowers)
     CType* t1 = NULL;
     CType* t2 = NULL;
     std::string procName = "";
-    generator->changeGeneratorStage(GenerationStage::AssignableVar);
-    CTokenPtr tokenTMP = AcceptIdent(cFollowers, { KeyWords::assignSy,KeyWords::semicolonSy });
-    t1 = GetCType(dynamic_cast<CIdentToken*>(tokenTMP.get()));
-    procName = dynamic_cast<CIdentToken*>(tokenTMP.get())->GetValue();
-    if (CheckKeyword(KeyWords::assignSy))
+    if (!CheckKeyword(KeyWords::writeLN))
     {
-        //AcceptKeyword(KeyWords::assignSy, cFollowers, {});
-        generator->changeGeneratorStage(GenerationStage::Nothing);
-        t2 = AssignOperator(cFollowers);
-    }
-    else if (CheckKeyword(KeyWords::bracketOpenSy))
-    {
-        ProcedureOperator(cFollowers, procName);
-        return;
-    }
-    else if (t1 == NULL)
-    {
+        generator->changeGeneratorStage(GenerationStage::AssignableVar);
+        CTokenPtr tokenTMP = AcceptIdent(cFollowers, { KeyWords::assignSy,KeyWords::semicolonSy });
+        t1 = GetCType(dynamic_cast<CIdentToken*>(tokenTMP.get()));
+        procName = dynamic_cast<CIdentToken*>(tokenTMP.get())->GetValue();
+        if (CheckKeyword(KeyWords::assignSy))
+        {
+            //AcceptKeyword(KeyWords::assignSy, cFollowers, {});
+            generator->changeGeneratorStage(GenerationStage::Nothing);
+            t2 = AssignOperator(cFollowers);
+        }
+        else if (CheckKeyword(KeyWords::bracketOpenSy))
+        {
+            ProcedureOperator(cFollowers, procName);
+            return;
+        }
+        else if (t1 == NULL)
+        {
 
 
-        ThrowSemanticError(currentScope->CheckProcParametersAmount(-1, procName));
-        return;
+            ThrowSemanticError(currentScope->CheckProcParametersAmount(-1, procName));
+            return;
+        }
+        else
+            return;
+
+        if (CheckAssignSemantic(t1, t2) == currentScope->nullType)
+            ThrowSemanticError(SemanticError::IncompatibleTypes);
     }
     else
-        return;
-
-    if (CheckAssignSemantic(t1, t2) == currentScope->nullType)
-        ThrowSemanticError(SemanticError::IncompatibleTypes);
-
+    {
+        
+        AcceptKeyword();
+        AcceptKeyword(KeyWords::bracketOpenSy, {}, {});
+        generator->changeGeneratorStage(GenerationStage::WRITELN);
+        if (CheckIdent())
+            AcceptIdent({}, {});
+        else
+            AcceptConst({}, {});
+        AcceptKeyword(KeyWords::bracketCloseSy, {}, {});
+    }
 
 
 
@@ -862,9 +876,11 @@ void CSyntax::CycleOperator(followers cFollowers)
 
 void CSyntax::IfOperator(followers cFollowers)
 {
-
+    generator->changeGeneratorStage(GenerationStage::IFSTART);
     AcceptKeyword(KeyWords::ifSy, cFollowers, { KeyWords::thenSy,KeyWords::elseSy,KeyWords::semicolonSy });
+    generator->changeGeneratorStage(GenerationStage::Expression);
     CType* tmp = Expression(cFollowers);
+    generator->changeGeneratorStage(GenerationStage::ExpressionLogicalIFEND);
     if (tmp != currentScope->FindCType("boolean"))
         ThrowSemanticError(SemanticError::IncompatibleTypes);
     AcceptKeyword(KeyWords::thenSy, cFollowers, { KeyWords::elseSy,KeyWords::semicolonSy });

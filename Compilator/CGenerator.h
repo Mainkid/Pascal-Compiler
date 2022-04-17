@@ -22,7 +22,7 @@
 
 class TreeNode;
 
-typedef std::shared_ptr<TreeNode> TreeNodePtr;
+
 
 enum class GenerationStage
 {
@@ -34,25 +34,74 @@ enum class GenerationStage
 	AssignableVar,
 	ExpressionLogicalEND,
 	WhileSTART,
-	WhileEND
+	WhileEND,
+	WRITELN,
+	WRITELNEND,
+	IFSTART,
+	ExpressionLogicalIFEND,
+	THENSTART,
+	THENEND,
+	ELSESTART,
+	ELSEEND
+};
+
+enum class IfBranch
+{
+	Else,
+	Then
 };
 
 
 
-class TreeNode
+
+class IfExp
 {
 public:
-	TreeNodePtr childL=nullptr;
-	TreeNodePtr childR = nullptr;
-	CTokenPtr tok = nullptr;
-	std::string constant = "";
+	std::string ifCondition;
+	std::string thenOperator;
+	std::string elseOperator;
+	int labelCount;
 
-	TreeNode()
+	IfExp(int label)
+	{
+		ifCondition = "";
+		thenOperator = "";
+		elseOperator = "";
+		labelCount = label;
+
+	}
+
+	IfExp()
 	{
 
 	}
+
 };
 
+class WhileExp
+{
+public:
+	std::string whileCondition;
+	std::string whileOperator;
+	int labelCount;
+
+	WhileExp(int label)
+	{
+		whileCondition = "";
+		whileOperator = "";
+		labelCount = label;
+	}
+	WhileExp()
+	{
+		whileCondition = "";
+		whileOperator = "";
+	}
+
+
+};
+
+typedef std::shared_ptr<WhileExp> WhilePtr;
+typedef std::shared_ptr<IfExp> IfPtr;
 
 
 class CGenerator
@@ -62,6 +111,7 @@ private:
 	
 public:
 	
+	CTokenPtr WriteLNToken;
 
 	std::queue<CTokenPtr> expressionQueue; //для записи символов из анализатора
 
@@ -78,10 +128,15 @@ public:
 	
 	std::map<std::string, VariantType> varTypes;
 
-	int label = 1; //Лейбел для цикла или для ифа
-	std::string whileCondition;
-	std::string whileOperator;
+	int label = -1; //Лейбел для цикла или для ифа
+
+	std::string labelName = "CYCLE";
 	bool isCycle = false;
+
+	std::stack<IfPtr> ifStack;
+	std::stack<WhilePtr> whileStack;
+
+
 
 
 	CGenerator()
@@ -99,8 +154,8 @@ public:
 				)";
 		programData=
 			R"(	.data
-	             FormatInteger db '%d', 0
-	             FormatDecimal db '%f', 0
+	             FormatInteger db '%d ', 0
+	             FormatDecimal db '%f ', 0
 				 FALSE equ 0
 				 TRUE  equ
 			   )";
@@ -117,7 +172,64 @@ end start
 			   )";
 	}
 
+	void WriteLN()
+	{
+		//Проверить, куда выводить
+		if (dynamic_cast<CIdentToken*>(WriteLNToken.get()))
+		{
+			CIdentToken* tmp = dynamic_cast<CIdentToken*>(WriteLNToken.get());
+			if (varTypes[tmp->GetValue()] == VariantType::vtInt)
+			{
+				//ЗДЕСЬ
+				if (whileStack.empty())
+					programStart += "invoke crt_printf, addr FormatInteger, " + tmp->GetValue() + "\n";
+				else
+					whileStack.top()->whileOperator+= "invoke crt_printf, addr FormatInteger, " + tmp->GetValue() + "\n";
+			}
+			else if (varTypes[tmp->GetValue()] == VariantType::vtReal)
+			{
+				if (whileStack.empty())
+					programStart += "invoke crt_printf, addr FormatDecimal, " + tmp->GetValue() + "\n";
+				else
+					whileStack.top()->whileOperator += "invoke crt_printf, addr FormatDecimal, " + tmp->GetValue() + "\n";
 
+			}
+
+		}
+		else if (dynamic_cast<CConstToken*>(WriteLNToken.get()))
+		{
+			constCounter++;
+			CConstToken* tmp = dynamic_cast<CConstToken*>(WriteLNToken.get());
+			if (tmp->GetConstType() == VariantType::vtInt)
+			{
+				if (whileStack.empty())
+					programStart += "invoke crt_printf, addr FormatInteger, const" + std::to_string(constCounter) + "\n";
+				else
+					whileStack.top()->whileOperator += "invoke crt_printf, addr FormatInteger, const" + std::to_string(constCounter) + "\n";
+				programData += "const" + std::to_string(constCounter) + " dd " + tmp->ToString() + "\n";
+			}
+			else if (tmp->GetConstType() == VariantType::vtReal)
+			{
+				if (whileStack.empty())
+					programStart += "invoke crt_printf, addr FormatDecimal, const" + std::to_string(constCounter) + "\n";
+				else
+					whileStack.top()->whileOperator += "invoke crt_printf, addr FormatDecimal, const" + std::to_string(constCounter) + "\n";
+				programData += "const" + std::to_string(constCounter) + " real8 " + tmp->ToString() + "\n";
+			}
+			else if (tmp->GetConstType() == VariantType::vtBoolean)
+			{
+				
+				programData += "const" + std::to_string(constCounter) + " dd " + tmp->ToString() + "\n";
+			}
+			else if (tmp->GetConstType() == VariantType::vtString)
+			{
+				programData += "const" + std::to_string(constCounter) + " db \"" + tmp->ToString() + "\",0\n";
+			}
+
+			
+
+		}
+	}
 
 	void pushToken(CTokenPtr token)
 	{
@@ -127,6 +239,13 @@ end start
 			expressionQueue.push(token);
 		else if (generationStage == GenerationStage::AssignableVar)
 			assignedIdent = token;
+		else if (generationStage == GenerationStage::WRITELN)
+		{
+			WriteLNToken = token;
+			generationStage=GenerationStage::Nothing;
+			WriteLN();
+
+		}
 		else if (generationStage == GenerationStage::ExpressionEND)
 		{
 			generationStage = GenerationStage::Nothing;
@@ -147,19 +266,44 @@ end start
 		else if (generationStage == GenerationStage::ExpressionLogicalEND)
 		{
 			generationStage = GenerationStage::Nothing;
-			whileCondition += "L" + std::to_string(label)+":\n";
+			whileStack.top().get()->whileCondition += "L" + std::to_string(whileStack.top().get()->labelCount) + ":\n";
 			
 			convertToPolandNotation();
-			evaluateLogicalExpression();
+			evaluateLogicalExpression(false);
 		}
+		else if (generationStage == GenerationStage::ExpressionLogicalIFEND)
+		{
+			generationStage = GenerationStage::Nothing;
+			convertToPolandNotation();
+			evaluateLogicalExpression(true);
+		}
+
+
 		else if (generationStage == GenerationStage::WhileEND)
 		{
 			generationStage = GenerationStage::Nothing;
-			programStart += "jmp L" + std::to_string(label)+"\n";
-			programStart += "L" + std::to_string(label+1) + ":\n";
-			programStart += whileOperator;
-			programStart += whileCondition;
-			label++;
+			
+
+			WhilePtr wp = whileStack.top();
+			whileStack.pop();
+
+			if (whileStack.empty() && ifStack.empty())
+			{
+				programStart += "jmp L" + std::to_string(wp.get()->labelCount) + "\n";
+				programStart += "L" + std::to_string(wp.get()->labelCount+1) + ":\n";
+				//Проверить, в начало программы, в if или в while
+				programStart += wp.get()->whileOperator;
+				programStart += wp.get()->whileCondition;
+			}
+			else if (!whileStack.empty())
+			{
+				whileStack.top()->whileOperator += "jmp L" + std::to_string(wp.get()->labelCount) + "\n";
+				whileStack.top()->whileOperator += "L" + std::to_string(wp.get()->labelCount+1) + ":\n";
+				whileStack.top()->whileOperator += wp.get()->whileOperator;
+				whileStack.top()->whileOperator += wp.get()->whileCondition;
+			}
+			
+			
 			isCycle = false;
 		}
 
@@ -319,7 +463,7 @@ end start
 					if (!isCycle)
 						programStart += "fild const"+ std::to_string(constCounter) + "\n";
 					else
-						whileOperator+= "fild const" + std::to_string(constCounter) + "\n";
+						whileStack.top().get()->whileOperator += "fild const" + std::to_string(constCounter) + "\n";
 				}
 				else if (constTok->GetConstType() == VariantType::vtReal)
 				{
@@ -327,7 +471,7 @@ end start
 					if (!isCycle)
 						programStart += "fld const" + std::to_string(constCounter)+"\n";
 					else
-						whileOperator += "fld const" + std::to_string(constCounter) + "\n";
+						whileStack.top().get()->whileOperator += "fld const" + std::to_string(constCounter) + "\n";
 				}
 				else if (constTok->GetConstType() == VariantType::vtBoolean)
 				{
@@ -340,6 +484,34 @@ end start
 				
 				
 			}
+			else if (dynamic_cast<CIdentToken*>(tmp.get()))
+			{
+				CIdentToken* cit = dynamic_cast<CIdentToken*>(tmp.get());
+
+				if (varTypes[cit->GetValue()] == VariantType::vtInt)
+				{
+					if (whileStack.empty())
+						programStart += "fild " + cit->GetValue() + "\n";
+					else
+						whileStack.top().get()->whileOperator += "fild " + cit->GetValue() + "\n";
+
+				}
+				else if (varTypes[cit->GetValue()] == VariantType::vtReal)
+				{
+					if (whileStack.empty())
+						programStart += "fld " + cit->GetValue() + "\n";
+					else
+						whileStack.top().get()->whileOperator += "fld " + cit->GetValue() + "\n";
+
+				}
+
+
+
+			}
+
+
+
+
 			else if (dynamic_cast<CKeywordToken*>(tmp.get()))
 			{
 				CKeywordToken* keywordTok = dynamic_cast<CKeywordToken*>(tmp.get());
@@ -349,28 +521,28 @@ end start
 					if (!isCycle)
 						programStart += "fmul \n";
 					else
-						whileOperator += "fmul \n";
+						whileStack.top().get()->whileOperator += "fmul \n";
 				}
 				else if (keywordTok->GetValue() == KeyWords::divisionSy)
 				{
 					if (!isCycle)
 						programStart += "fdiv \n";
 					else
-						whileOperator += "fdiv \n";
+						whileStack.top().get()->whileOperator += "fdiv \n";
 				}
 				else if (keywordTok->GetValue() == KeyWords::plusSy)
 				{
 					if (!isCycle)
 						programStart += "fadd \n";
 					else
-						whileOperator += "fadd \n";
+						whileStack.top().get()->whileOperator += "fadd \n";
 				}
 				else if (keywordTok->GetValue() == KeyWords::minusSy)
 				{
 					if (!isCycle)
 						programStart += "fsub \n";
 					else
-						whileOperator += "fsub \n";
+						whileStack.top().get()->whileOperator += "fsub \n";
 
 				}
 
@@ -385,7 +557,7 @@ end start
 		}
 	}
 
-	void evaluateLogicalExpression()
+	void evaluateLogicalExpression(bool isIf)
 	{
 		int boolFound = -1; //0-false, 1- true
 		int stackObserved = 0;
@@ -397,11 +569,18 @@ end start
 				CIdentToken* tokenIdent = dynamic_cast<CIdentToken*>(exprQ.front().get());
 				if (varTypes[tokenIdent->GetValue()] == VariantType::vtInt)
 				{
-					whileCondition += "fild " + tokenIdent->GetValue() + "\n";
+
+					if (!isIf)
+						whileStack.top().get()->whileCondition += "fild " + tokenIdent->GetValue() + "\n";
+					else
+						ifStack.top().get()->ifCondition+= "fild " + tokenIdent->GetValue() + "\n";
 				}
 				else if (varTypes[tokenIdent->GetValue()] == VariantType::vtReal)
 				{
-					whileCondition += "fld " + tokenIdent->GetValue() + "\n";
+					if (!isIf)
+						whileStack.top().get()->whileCondition += "fld " + tokenIdent->GetValue() + "\n";
+					else
+						ifStack.top().get()->ifCondition+= "fld " + tokenIdent->GetValue() + "\n";
 				}
 			}
 			else if (dynamic_cast<CConstToken*>(exprQ.front().get()))
@@ -412,12 +591,18 @@ end start
 				if (tokenConst->GetConstType() == VariantType::vtInt)
 				{
 					programData += "const" + std::to_string(constCounter) + " dd " + tokenConst->ToString() + "\n";
-					whileCondition += "fild " + tokenConst->ToString() + "\n";
+					if (!isIf)
+						whileStack.top().get()->whileCondition += "fild const" + std::to_string(constCounter) + "\n";
+					else
+						ifStack.top().get()->ifCondition += "fild const" + std::to_string(constCounter) + "\n";
 				}
 				else if (tokenConst->GetConstType() == VariantType::vtReal)
 				{
 					programData += "const" + std::to_string(constCounter) + " real8 " + tokenConst->ToString() + "\n";
-					whileCondition += "fld " + tokenConst->ToString() + "\n";
+					if (!isIf)
+						whileStack.top().get()->whileCondition += "fld const" + std::to_string(constCounter) + "\n";
+					else
+						ifStack.top().get()->ifCondition += "fld const" + std::to_string(constCounter) + "\n";
 				}
 				else if (tokenConst->GetConstType() == VariantType::vtBoolean)
 				{
@@ -436,49 +621,62 @@ end start
 			else if (dynamic_cast<CKeywordToken*>(exprQ.front().get()))
 			{
 				CKeywordToken* keywordTok = dynamic_cast<CKeywordToken*>(exprQ.front().get());
-				whileCondition += "fcompp\n";
+				if (!isIf)
+				{
+					whileStack.top().get()->whileCondition += "fcompp\n";
+					whileStack.top().get()->whileCondition += "fstsw ax\n";
+					whileStack.top().get()->whileCondition += "sahf\n";
+				}
+				else
+				{
+					ifStack.top().get()->ifCondition += "fcompp\n";
+					ifStack.top().get()->ifCondition += "fstsw ax\n";
+					ifStack.top().get()->ifCondition += "sahf\n";
+				}
 				if (keywordTok->GetValue() == KeyWords::equalSy)
 				{
 					if (boolFound == 0)
-						whileCondition += "jne L" + std::to_string(label+1) +"\n";
+					{
+						whileStack.top().get()->whileCondition += "jne L" + std::to_string(whileStack.top().get()->labelCount + 1) + "\n";
+					}
 					else
-						whileCondition += "je L" + std::to_string(label+1) + "\n";
+						whileStack.top().get()->whileCondition += "je L" + std::to_string(whileStack.top().get()->labelCount + 1) + "\n";
 				}
 				else if (keywordTok->GetValue() == KeyWords::notEqualSy)
 				{
 					if (boolFound == 0)
-						whileCondition += "je L" + std::to_string(label + 1) + "\n";
+						whileStack.top().get()->whileCondition += "je L" + std::to_string(whileStack.top().get()->labelCount + 1) + "\n";
 					else
-						whileCondition += "jne L" + std::to_string(label + 1) + "\n";
+						whileStack.top().get()->whileCondition += "jne L" + std::to_string(whileStack.top().get()->labelCount + 1) + "\n";
 				}
 				else if (keywordTok->GetValue() == KeyWords::moreSy)
 				{
 					if (boolFound == 0)
-						whileCondition += "jle L" + std::to_string(label + 1) + "\n";
+						whileStack.top().get()->whileCondition += "jae L" + std::to_string(whileStack.top().get()->labelCount + 1) + "\n";
 					else
-						whileCondition += "jm L" + std::to_string(label + 1) + "\n";
+						whileStack.top().get()->whileCondition += "jb L" + std::to_string(whileStack.top().get()->labelCount + 1) + "\n";
 
 				}
 				else if (keywordTok->GetValue() == KeyWords::moreEqualSy)
 				{
 					if (boolFound == 0)
-						whileCondition += "jl L" + std::to_string(label + 1) + "\n";
+						whileStack.top().get()->whileCondition += "ja L" + std::to_string(whileStack.top().get()->labelCount + 1) + "\n";
 					else
-						whileCondition += "jme L" + std::to_string(label + 1) + "\n";
+						whileStack.top().get()->whileCondition += "jbe L" + std::to_string(whileStack.top().get()->labelCount + 1) + "\n";
 				}
 				else if (keywordTok->GetValue() == KeyWords::lessSy)
 				{
 					if (boolFound == 0)
-						whileCondition += "jme L" + std::to_string(label + 1) + "\n";
+						whileStack.top().get()->whileCondition += "jbe L" + std::to_string(whileStack.top().get()->labelCount + 1) + "\n";
 					else
-						whileCondition += "jl L" + std::to_string(label + 1) + "\n";
+						whileStack.top().get()->whileCondition += "ja L" + std::to_string(whileStack.top().get()->labelCount + 1) + "\n";
 				}
 				else if (keywordTok->GetValue() == KeyWords::lessEqualSy)
 				{
 					if (boolFound == 0)
-						whileCondition += "jm L" + std::to_string(label + 1) + "\n";
+						whileStack.top().get()->whileCondition += "jb L" + std::to_string(whileStack.top().get()->labelCount + 1) + "\n";
 					else
-						whileCondition += "jle L" + std::to_string(label + 1) + "\n";
+						whileStack.top().get()->whileCondition += "jae L" + std::to_string(whileStack.top().get()->labelCount + 1) + "\n";
 
 				}
 
@@ -490,12 +688,17 @@ end start
 
 		if (boolFound == 0 && stackObserved == 1)
 		{
-			whileCondition += "nop \n";
+			whileStack.top().get()->whileCondition += "nop \n";
 		}
 		else if (boolFound == 1 && stackObserved == 1)
 		{
-			whileCondition += "jmp L"+std::to_string(label+1) + "\n";
+			whileStack.top().get()->whileCondition += "jmp L"+std::to_string(whileStack.top().get()->labelCount+1) + "\n";
 		}
+	}
+
+	void evaluateIfLogicalExpression()
+	{
+
 	}
 
 	void evaluateAssign()
@@ -503,10 +706,17 @@ end start
 		//ПРОВЕРЯТЬ int ИЛИ REAL
 
 		std::string tmp = dynamic_cast<CIdentToken*>(assignedIdent.get())->GetValue();
-		if (!isCycle)
-			programStart += "fstp " + tmp + "\n";
+
+		if (varTypes[tmp]==VariantType::vtString)
+			if (whileStack.empty())
+				programStart += "fstp " + tmp + "\n";
+			else
+				whileStack.top().get()->whileOperator += "fstp " + tmp + "\n";
 		else
-			whileOperator+= "fstp " + tmp + "\n";
+			if (whileStack.empty())
+				programStart += "fistp " + tmp + "\n";
+			else
+				whileStack.top().get()->whileOperator += "fistp " + tmp + "\n";
 	}
 
 	void evaluateBoolAssign()
@@ -517,7 +727,7 @@ end start
 			if (!isCycle)
 				programStart += "MOV eax,FALSE\n";
 			else
-				whileOperator+= "MOV eax,FALSE\n";
+				whileStack.top().get()->whileOperator += "MOV eax,FALSE\n";
 
 		}
 		else
@@ -525,13 +735,13 @@ end start
 			if(!isCycle)
 				programStart += "MOV eax,TRUE\n";
 			else
-				whileOperator += "MOV eax,TRUE\n";
+				whileStack.top().get()->whileOperator += "MOV eax,TRUE\n";
 
 		}
 		if (!isCycle)
 			programStart += "MOV " + dynamic_cast<CIdentToken*>(assignedIdent.get())->GetValue() + ",eax\n";
 		else
-			whileOperator += "MOV " + dynamic_cast<CIdentToken*>(assignedIdent.get())->GetValue() + ",eax\n";
+			whileStack.top().get()->whileOperator += "MOV " + dynamic_cast<CIdentToken*>(assignedIdent.get())->GetValue() + ",eax\n";
 
 		exprQ.pop();
 	}
@@ -542,54 +752,23 @@ end start
 		if (gs == GenerationStage::WhileSTART)
 		{
 			isCycle = true;
+			label += 2;
+			WhilePtr wp = std::make_shared<WhileExp>(label);
+			whileStack.push(wp);
 		}
 		else if (gs == GenerationStage::WhileEND)
 		{
 			isCycle = false;
 		}
+		else if (gs == GenerationStage::IFSTART)
+		{
+			label += 2;
+			IfPtr ip = std::make_shared<IfExp>(label);
+			ifStack.push(ip);
+		}
 	}
 
 
-	//void makeTreeFromPolandNotation()
-	//{
-	//	std::stack<TreeNodePtr> treeStack;
-	//	
-
-	//	while (!exprQ.empty())
-	//	{
-	//		CTokenPtr q = exprQ.front();
-
-	//		if (dynamic_cast<CKeywordToken*>(q.get()))
-	//		{
-	//			//ДОБАВИТЬ УНАРНЫЙ NOT
-	//			TreeNodePtr newElem = std::make_shared<TreeNode>();
-	//			newElem.get()->tok = q;
-	//			newElem.get()->childL = treeStack.top();
-	//			treeStack.pop();
-	//			newElem.get()->childR = treeStack.top();
-	//			treeStack.pop();
-
-	//			root = newElem;
-	//			treeStack.push(newElem);
-	//		}
-	//		else
-	//		{
-	//			TreeNodePtr newElem = std::make_shared<TreeNode>();
-	//			newElem.get()->tok = q;
-	//			newElem.get()->constant = constQ.front();
-	//			constQ.pop();
-	//			treeStack.push(newElem);
-	//			
-	//		}
-
-
-
-
-
-	//		exprQ.pop();
-
-	//	}
-	//}
 
 
 
