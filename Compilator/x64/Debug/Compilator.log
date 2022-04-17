@@ -1,3 +1,5 @@
 ﻿  CSyntax.cpp
-C:\Users\jdczy\source\repos\Compilator\Compilator\CSyntax.cpp(322,22): warning C4566: символ, представленный универсальным именем символа "\uFFFD", невозможно представить в текущей кодовой странице (1251)
+C:\Users\jdczy\source\repos\Compilator\Compilator\CSyntax.cpp(349,22): warning C4566: символ, представленный универсальным именем символа "\uFFFD", невозможно представить в текущей кодовой странице (1251)
+  Compilator.cpp
+  Создание кода...
   Compilator.vcxproj -> C:\Users\jdczy\source\repos\Compilator\x64\Debug\Compilator.exe

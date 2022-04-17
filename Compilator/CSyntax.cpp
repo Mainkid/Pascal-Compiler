@@ -21,10 +21,17 @@ void CSyntax::AddNewVariables(CIdentToken* type, UsageType usageType)
 
     while (!identQueue.empty())
     {
-        if (!isSkipping&&type!=NULL)
-            ThrowSemanticError(currentScope->AddIdent(identQueue.front(), usageType, type));
+        if (!isSkipping && type != NULL)
+        {
+
+            if (!ThrowSemanticError(currentScope->AddIdent(dynamic_cast<CIdentToken*>(identQueue.front().get()), usageType, type)))
+            {
+                generator->pushToVariableQueue(identQueue.front());
+            }
+        }
         identQueue.pop();
     }
+    generator->setVariablesType(type);
 }
 
 void CSyntax::AddNewVariablesToBrackets(CIdentToken* type, std::string procName)
@@ -34,7 +41,7 @@ void CSyntax::AddNewVariablesToBrackets(CIdentToken* type, std::string procName)
         if (!isSkipping && type != NULL)
         {
             currentScope->AddParameter(currentScope->FindCType( type->GetValue()), procName);
-            ThrowSemanticError(currentScope->AddIdent(identQueue.front(), UsageType::VAR, type));
+            ThrowSemanticError(currentScope->AddIdent(dynamic_cast<CIdentToken*>(identQueue.front().get()), UsageType::VAR, type));
         }
         identQueue.pop();
     }
@@ -45,16 +52,16 @@ void CSyntax::AddNewProcIdent(CIdentToken* proc)
     ThrowSemanticError(currentScope->AddIdent(proc, UsageType::PROC, NULL));
 }
 
-void CSyntax::ThrowSemanticError(SemanticError err)
+bool CSyntax::ThrowSemanticError(SemanticError err)
 {
 
     if (isSkipping)
-        return;
+        return false;
 
     switch (err)
     {
     case SemanticError::NoError:
-        return;
+        return false;
         break;
     case SemanticError::UnknownType:
         std::cout << "Semantic Error: Unknown type.";
@@ -78,6 +85,7 @@ void CSyntax::ThrowSemanticError(SemanticError err)
         std::cout << " Line: " << lexer->GetLinePos() << ", Pos: " << lexer->GetSymbolPos() << std::endl;
     semErrLine = -1;
     semErrPos = -1;
+    return true;
 }
 
 CType* CSyntax::GetCType(CIdentToken* tok)
@@ -211,34 +219,45 @@ void CSyntax::StartSyntaxAnalyze(std::string program)
     lexer = new CLexer(program + ' ');
     currentScope = new Scope();
     currentScope = new Scope(currentScope);
+    generator = new CGenerator();
     GetNextNotEmptyToken();
     Program();
+    
     std::cout << "Completed!";
 }
 
-void CSyntax::AcceptKeyword()
+CKeywordToken* CSyntax::AcceptKeyword()
 {
 
+    CKeywordToken* ct = nullptr;
     isSkipping = false;
+    ct = dynamic_cast<CKeywordToken*>(currentToken.get());
+    
     int code = static_cast<int>(dynamic_cast<CKeywordToken*>(currentToken.get())->GetValue());
     std::cout << "ACCEPTED:" << code << std::endl;
+    generator->pushToken(currentToken);
     if (!isSkipping)
         GetNextNotEmptyToken();
     if (!currentToken)
     {
         exit(0);
     }
+    
+    return ct;
 }
 
-void CSyntax::AcceptKeyword(KeyWords keyWord, followers cfollowers, std::set<KeyWords> new_followers)
+CKeywordToken* CSyntax::AcceptKeyword(KeyWords keyWord, followers cfollowers, std::set<KeyWords> new_followers)
 {
     //�������� �� ��, ��� ����� �������� �������� ������
     //CKeywordToken* keyWordToken = dynamic_cast<CKeywordToken*>(currentToken.get());
+
+    CKeywordToken* ct = nullptr;
+
     cfollowers.l.insert(new_followers.begin(), new_followers.end());
 
     if (isSkipping && keyWord != skipToKeyWord)
     {
-        return;
+        return ct;
     }
     else if (isSkipping && keyWord == skipToKeyWord)
     {
@@ -253,6 +272,7 @@ void CSyntax::AcceptKeyword(KeyWords keyWord, followers cfollowers, std::set<Key
     {
         if (dynamic_cast<CKeywordToken*>(currentToken.get())->GetValue() == keyWord)
         {
+            ct = dynamic_cast<CKeywordToken*>(currentToken.get());
             int code = static_cast<int>(dynamic_cast<CKeywordToken*>(currentToken.get())->GetValue());
             std::cout << "ACCEPTED:" << code << std::endl;
         }
@@ -262,6 +282,9 @@ void CSyntax::AcceptKeyword(KeyWords keyWord, followers cfollowers, std::set<Key
             skipToNextKeyword(keyWord, cfollowers.l);
         }
     }
+    generator->pushToken(currentToken);
+    
+    
 
     if (!isSkipping)
         GetNextNotEmptyToken();
@@ -269,12 +292,14 @@ void CSyntax::AcceptKeyword(KeyWords keyWord, followers cfollowers, std::set<Key
     {
         if (isSkipping)
             PrintError(keyWord, lexer->GetLinePos(), lexer->GetSymbolPos());
+        else
+            generator->printCodeToFile();
         exit(0);
     }
-
+    return ct;
 }
 
-CIdentToken* CSyntax::AcceptIdent(followers cFollowers, std::set<KeyWords> new_followers)
+CTokenPtr CSyntax::AcceptIdent(followers cFollowers, std::set<KeyWords> new_followers)
 {
     cFollowers.l.insert(new_followers.begin(), new_followers.end());
 
@@ -292,15 +317,17 @@ CIdentToken* CSyntax::AcceptIdent(followers cFollowers, std::set<KeyWords> new_f
     {
 
         std::cout << "ACCEPTED: ident(" << dynamic_cast<CIdentToken*>(currentToken.get())->GetValue() << ")" << std::endl;
-        retToken = dynamic_cast<CIdentToken*>(currentToken.release());
+        
     }
+    lastToken = currentToken;
+    generator->pushToken(currentToken);
     if (!isSkipping)
         GetNextNotEmptyToken();
     if (!currentToken)
     {
         exit(0);
     }
-    return retToken;
+    return lastToken;
 
 }
 
@@ -327,7 +354,7 @@ CIdentToken* CSyntax::AcceptTypeKeywords()
         //KeyWords currentKeyword = dynamic_cast<CKeywordToken*>(currentToken.get())->GetValue();
         //if (currentKeyword == KeyWords::booleanSy || currentKeyword == KeyWords::stringSy || currentKeyword == KeyWords::integerSy || currentKeyword == KeyWords::realSy)
             std::cout << "AIGHT" << std::endl;
-            tmp = dynamic_cast<CIdentToken*>(currentToken.release());
+            tmp = dynamic_cast<CIdentToken*>(currentToken.get());
     }
     GetNextNotEmptyToken();
     if (!currentToken)
@@ -355,6 +382,7 @@ CType* CSyntax::AcceptConst(followers cFollowers, std::set<KeyWords> KeyWords)
         std::cout << "ACCEPTED: const(" << dynamic_cast<CConstToken*>(currentToken.get())->ToString() << ")" << std::endl;
         retCType = currentScope->FindCType(GetConstType(dynamic_cast<CConstToken*>(currentToken.get())->ToString()));
     }
+    generator->pushToken(currentToken);
     GetNextNotEmptyToken();
     if (!currentToken)
     {
@@ -448,7 +476,7 @@ void CSyntax::Program()
     AcceptKeyword(KeyWords::semicolonSy, cFollowers, { KeyWords::varSy,KeyWords::semicolonSy,KeyWords::typeSy,KeyWords::procedureSy });
     Block(cFollowers);
     AcceptKeyword(KeyWords::dotSy, cFollowers, {});
-
+    
 }
 
 void CSyntax::Block(followers cFollowers)
@@ -482,14 +510,15 @@ void CSyntax::TypeDefinition(followers cFollowers)
 
     identQueue.push(AcceptIdent(cFollowers, { KeyWords::semicolonSy,KeyWords::procedureSy,KeyWords::beginSy }));
     AcceptKeyword(KeyWords::equalSy, cFollowers, { KeyWords::semicolonSy,KeyWords::procedureSy,KeyWords::beginSy });
-    CIdentToken* typeToken = AcceptIdent(cFollowers, {});
-    AddNewVariables(typeToken, UsageType::TYPE);
+    CTokenPtr typeToken = AcceptIdent(cFollowers, {});
+    AddNewVariables(dynamic_cast<CIdentToken*>(typeToken.get()), UsageType::TYPE);
     //Type(); //��������
 
 }
 
 void CSyntax::VariableSection(followers cFollowers)
 {
+
 
     if (CheckKeyword(KeyWords::varSy))
     {
@@ -517,9 +546,10 @@ void CSyntax::OneTypeVariableDefinition(followers cFollowers)
         AcceptKeyword();
         identQueue.push(AcceptIdent(cFollowers, { KeyWords::integerSy,KeyWords::realSy,KeyWords::stringSy,KeyWords::booleanSy,KeyWords::semicolonSy }));
     }
+
     AcceptKeyword(KeyWords::colonSy, cFollowers, { KeyWords::integerSy,KeyWords::realSy,KeyWords::stringSy,KeyWords::booleanSy,KeyWords::semicolonSy });
-    CIdentToken* typeToken = AcceptIdent(cFollowers, {});
-    AddNewVariables(typeToken, UsageType::VAR);
+    CTokenPtr typeToken = AcceptIdent(cFollowers, {});
+    AddNewVariables(dynamic_cast<CIdentToken*>(typeToken.get()), UsageType::VAR);
 
 }
 //DO
@@ -576,12 +606,14 @@ void CSyntax::SimpleOperator(followers cFollowers)
     CType* t1 = NULL;
     CType* t2 = NULL;
     std::string procName = "";
-    CIdentToken* tokenTMP = AcceptIdent(cFollowers, { KeyWords::assignSy,KeyWords::semicolonSy });
-    t1 = GetCType(tokenTMP);
-    procName = tokenTMP->GetValue();
+    generator->changeGeneratorStage(GenerationStage::AssignableVar);
+    CTokenPtr tokenTMP = AcceptIdent(cFollowers, { KeyWords::assignSy,KeyWords::semicolonSy });
+    t1 = GetCType(dynamic_cast<CIdentToken*>(tokenTMP.get()));
+    procName = dynamic_cast<CIdentToken*>(tokenTMP.get())->GetValue();
     if (CheckKeyword(KeyWords::assignSy))
     {
         //AcceptKeyword(KeyWords::assignSy, cFollowers, {});
+        generator->changeGeneratorStage(GenerationStage::Nothing);
         t2 = AssignOperator(cFollowers);
     }
     else if (CheckKeyword(KeyWords::bracketOpenSy))
@@ -610,9 +642,12 @@ void CSyntax::SimpleOperator(followers cFollowers)
 //�������� �� ���������!!!
 CType* CSyntax::AssignOperator(followers cFollowers)
 {
-
+    
     AcceptKeyword(KeyWords::assignSy, cFollowers, { KeyWords::semicolonSy });
-    return Expression(cFollowers);
+    generator->changeGeneratorStage(GenerationStage::Expression);
+    CType* tmp= Expression(cFollowers);
+    generator->changeGeneratorStage(GenerationStage::ExpressionEND);
+    return tmp;
 
 }
 
@@ -620,7 +655,7 @@ CType* CSyntax::Expression(followers cFollowers)
 {
     CType* t1 = NULL;
     CType* t2 = NULL;
-
+    
     t1 = SimpleExpression(cFollowers);
     if (CheckKeyword(KeyWords::equalSy) || CheckKeyword(KeyWords::lessEqualSy) || CheckKeyword(KeyWords::lessSy) ||
         CheckKeyword(KeyWords::moreEqualSy) || CheckKeyword(KeyWords::moreSy) || CheckKeyword(KeyWords::inSy) || CheckKeyword(KeyWords::notEqualSy))
@@ -631,6 +666,7 @@ CType* CSyntax::Expression(followers cFollowers)
             return currentScope->FindCType("boolean");
         else return currentScope->nullType;
     }
+    
     return t1;
 
 }
@@ -723,7 +759,10 @@ CType* CSyntax::Multiplier(followers cFollowers)
     }
     else if (CheckIdent())
     {
-        return GetCType(AcceptIdent(cFollowers, {}));
+        CTokenPtr tmp = AcceptIdent(cFollowers, {});
+        ctype= GetCType(dynamic_cast<CIdentToken*>(tmp.get()));
+        //generator->pushToken(tmp);
+        return ctype;
     }
     else if (CheckConst())
     {
@@ -752,7 +791,7 @@ void CSyntax::FactParameter(followers cFollowers, std::string procedureName)
     int pos = 0;
 
     if (CheckIdent())
-        t1=currentScope->FindCType( AcceptIdent(cFollowers, {})->GetValue());
+        t1=currentScope->FindCType(dynamic_cast<CIdentToken*>( AcceptIdent(cFollowers, {}).get())->GetValue());
     else
         t1=Expression(cFollowers);
 
@@ -764,7 +803,7 @@ void CSyntax::FactParameter(followers cFollowers, std::string procedureName)
         ThrowSemanticError(currentScope->CheckProcedureParameters(pos, t1, procedureName));
         AcceptKeyword();
         if (CheckIdent())
-            t1= currentScope->FindCType(AcceptIdent(cFollowers, {})->GetValue());
+            t1= currentScope->FindCType(dynamic_cast<CIdentToken*>(AcceptIdent(cFollowers, {}).get())->GetValue());
         else
             t1=Expression(cFollowers);
         pos++;
@@ -809,13 +848,16 @@ void CSyntax::ChoosingOperator(followers cFollowers)
 
 void CSyntax::CycleOperator(followers cFollowers)
 {
+    generator->changeGeneratorStage(GenerationStage::WhileSTART);
     AcceptKeyword(KeyWords::whileSy, cFollowers, { KeyWords::doSy,KeyWords::semicolonSy,KeyWords::bracketOpenSy });
-
+    generator->changeGeneratorStage(GenerationStage::Expression);
     CType* tmp = Expression(cFollowers);
+    generator->changeGeneratorStage(GenerationStage::ExpressionLogicalEND);
     if (tmp != currentScope->FindCType("boolean"))
         ThrowSemanticError(SemanticError::IncompatibleTypes);
     AcceptKeyword(KeyWords::doSy, cFollowers, { KeyWords::semicolonSy });
     UnmarkedOperator(cFollowers);
+    generator->changeGeneratorStage(GenerationStage::WhileEND);
 }
 
 void CSyntax::IfOperator(followers cFollowers)
@@ -897,7 +939,8 @@ void CSyntax::ProcedureHeader(followers cFollowers)
 {
 
     AcceptKeyword(KeyWords::procedureSy, cFollowers, { KeyWords::beginSy });
-    CIdentToken* cit = AcceptIdent(cFollowers, {});
+    CTokenPtr q = AcceptIdent(cFollowers, {});
+    CIdentToken* cit = dynamic_cast<CIdentToken*>(q.get());
     AddNewProcIdent(cit);
     std::string procName = cit->GetValue();
     currentScope = new Scope(currentScope);

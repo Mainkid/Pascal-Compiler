@@ -32,6 +32,7 @@ enum class SemanticError
 	WrongParametersValue
 };
 
+
 class CType;
 class CIdent;
 class Scope;

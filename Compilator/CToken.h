@@ -74,6 +74,15 @@ enum class KeyWords {
 
 
 
+enum class ConstType
+{
+	Integer,
+	String,
+	Boolean,
+	Real
+
+};
+
 class CToken {
 private:
 	TokenType tType;
@@ -110,6 +119,9 @@ public:
 	CConstToken(float v);
 	CConstToken(bool v);
 	CConstToken(std::string v);
+	VariantType GetConstType();
+
+
 private:
 	CVariantPtr value;
 	

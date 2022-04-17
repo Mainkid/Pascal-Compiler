@@ -147,6 +147,7 @@
     <ClCompile Include="CVariant.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CGenerator.h" />
     <ClInclude Include="CLexer.h" />
     <ClInclude Include="CSemantic.h" />
     <ClInclude Include="CSyntax.h" />

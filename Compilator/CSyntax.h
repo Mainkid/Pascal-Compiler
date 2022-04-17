@@ -4,12 +4,13 @@
 #include "CLexer.h"
 #include "CLexer.h"
 #include "CSemantic.h"
+#include "CGenerator.h"
 #include <list>
 #include <set>
 #include <iterator>
 #include <queue>
 
-typedef std::unique_ptr<CToken> CTokenPtr;
+typedef std::shared_ptr<CToken> CTokenPtr;
 
 struct followers
 {
@@ -40,21 +41,21 @@ private:
 
 	KeyWords skipToKeyWord;
 	Scope* currentScope;
-	std::queue <CIdentToken*> identQueue;
+	std::queue <CTokenPtr> identQueue;
 
 	void AddNewProcIdent(CIdentToken*);
 	void AddNewVariables(CIdentToken*,UsageType);
-	void ThrowSemanticError(SemanticError);
+	bool ThrowSemanticError(SemanticError);
 	CType* GetCType(CIdentToken*);
 	CType* CheckSemantic(CType* t1, CType* t2);
 	CType* CheckAssignSemantic(CType*, CType*);
 
-
+	
 	void skipToNextKeyword(KeyWords, std::set<KeyWords>);
 	void Program();
-	CIdentToken* AcceptIdent(followers, std::set<KeyWords>);
-	void AcceptKeyword(KeyWords, followers,std::set<KeyWords>);
-	void AcceptKeyword();
+	CTokenPtr AcceptIdent(followers, std::set<KeyWords>);
+	CKeywordToken* AcceptKeyword(KeyWords, followers,std::set<KeyWords>);
+	CKeywordToken* AcceptKeyword();
 	CType* AcceptConst(followers, std::set<KeyWords>);
 	bool CheckConst();
 	bool CheckKeyword(KeyWords);
@@ -107,7 +108,9 @@ private:
 	void AddNewVariablesToBrackets(CIdentToken*, std::string);
 	CTokenPtr currentToken=nullptr;
 	CLexer* lexer=nullptr;
+	CGenerator* generator = nullptr;
 
+	CTokenPtr lastToken = nullptr;
 };
 
 

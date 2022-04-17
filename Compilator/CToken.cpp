@@ -62,6 +62,12 @@ std::string CConstToken::ToString()
 	return "";
 }
 
+VariantType CConstToken::GetConstType()
+{
+	return value.get()->GetVariantType();
+	
+}
+
 KeyWords CKeywordToken::GetValue()
 {
 	return value;

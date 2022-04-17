@@ -1,12 +1,10 @@
 program firstOne;
-var x,z:real;
-q:integer;
-procedure fun(q:integer);
-var y:real;
+var a,b,d:integer;
+flag:boolean;
 begin
-y:=1;
-end;
 
+while (b=a) do
 begin
-fun (q)
+b:=3+5;
+end
 end.

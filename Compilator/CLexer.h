@@ -6,7 +6,7 @@
 
 
 
-typedef std::unique_ptr<CToken> CTokenPtr;
+typedef std::shared_ptr<CToken> CTokenPtr;
 
 
 enum class LexicalError
@@ -24,10 +24,10 @@ class CLexer
 public:
 	CTokenPtr GetTokenType();
 	CTokenPtr GetNextToken();
-	bool IsReal(std::string);
-	bool IsInteger(std::string);
-	bool IsBoolean(std::string);
-	bool IsString(std::string);
+	 bool IsReal(std::string);
+	 bool IsInteger(std::string);
+	 bool IsBoolean(std::string);
+	 bool IsString(std::string);
 	int GetLinePos();
 	int GetSymbolPos();
 	LexicalError IsIdentifier(std::string);
