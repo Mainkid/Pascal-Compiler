@@ -1,16 +1,15 @@
 program firstOne;
 var a,b,d:integer;
+r:real;
 flag:boolean;
 begin
-a:=100;
-while (a>50) do begin
-a:=a-10;
-writeln(a);
-b:=20;
-while (b=100) do begin
-b:=b*5;
-writeln(b);
+a:=42;
+b:=35;
+while (a <> b) do begin
+if (a>b) then
+a:=a-b
+else
+b:=b-a;
 end;
-end
-
+writeln(a)
 end.

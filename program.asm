@@ -14,48 +14,44 @@
 			   a dd ?
 b dd ?
 d dd ?
+r real8 ?
 flag dd FALSE
-const1 dd 100
-const2 dd 50
-const3 dd 10
-const4 dd 20
-const5 dd 100
-const6 dd 5
+const1 dd 42
+const2 dd 35
 
 	.code
 				start:
 			   fild const1
 fistp a
+fild const2
+fistp b
 jmp L1
 L2:
 fild a
-fild const3
+fild b
+fcompp
+fstsw ax
+sahf
+jae L3
+fild a
+fild b
 fsub 
 fistp a
-invoke crt_printf, addr FormatInteger, a
-fild const4
-fistp b
-jmp L3
-L4:
-fild b
-fild const6
-fmul 
-fistp b
-invoke crt_printf, addr FormatInteger, b
+jmp L4
 L3:
 fild b
-fild const5
-fcompp
-fstsw ax
-sahf
-je L4
+fild a
+fsub 
+fistp b
+L4:
 L1:
 fild a
-fild const2
+fild b
 fcompp
 fstsw ax
 sahf
-jb L2
+jne L2
+invoke crt_printf, addr FormatInteger, a
 
 
 	invoke crt__exit, 0

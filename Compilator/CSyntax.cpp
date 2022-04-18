@@ -6,6 +6,8 @@
 
 CSyntax::CSyntax()
 {
+    
+
     isSkipping = false;
 }
 
@@ -219,7 +221,9 @@ void CSyntax::StartSyntaxAnalyze(std::string program)
     lexer = new CLexer(program + ' ');
     currentScope = new Scope();
     currentScope = new Scope(currentScope);
-    generator = new CGenerator();
+    //Генератор
+    generator = new CGenerator(true);
+
     GetNextNotEmptyToken();
     Program();
     
@@ -234,7 +238,7 @@ CKeywordToken* CSyntax::AcceptKeyword()
     ct = dynamic_cast<CKeywordToken*>(currentToken.get());
     
     int code = static_cast<int>(dynamic_cast<CKeywordToken*>(currentToken.get())->GetValue());
-    std::cout << "ACCEPTED:" << code << std::endl;
+    //std::cout << "ACCEPTED:" << code << std::endl;
     generator->pushToken(currentToken);
     if (!isSkipping)
         GetNextNotEmptyToken();
@@ -266,6 +270,7 @@ CKeywordToken* CSyntax::AcceptKeyword(KeyWords keyWord, followers cfollowers, st
 
     if (currentToken.get()->getType() != TokenType::ttKeyword)
     {
+        generator->changeGeneratorStage(GenerationStage::Error);
         skipToNextKeyword(keyWord, cfollowers.l);
     }
     else
@@ -274,11 +279,11 @@ CKeywordToken* CSyntax::AcceptKeyword(KeyWords keyWord, followers cfollowers, st
         {
             ct = dynamic_cast<CKeywordToken*>(currentToken.get());
             int code = static_cast<int>(dynamic_cast<CKeywordToken*>(currentToken.get())->GetValue());
-            std::cout << "ACCEPTED:" << code << std::endl;
+            //std::cout << "ACCEPTED:" << code << std::endl;
         }
         else
         {
-
+            generator->changeGeneratorStage(GenerationStage::Error);
             skipToNextKeyword(keyWord, cfollowers.l);
         }
     }
@@ -311,12 +316,13 @@ CTokenPtr CSyntax::AcceptIdent(followers cFollowers, std::set<KeyWords> new_foll
 
     if (currentToken.get()->getType() != TokenType::ttIdent)
     {
+        generator->changeGeneratorStage(GenerationStage::Error);
         skipToNextKeyword(KeyWords::errIdent, cFollowers.l);
     }
     else
     {
 
-        std::cout << "ACCEPTED: ident(" << dynamic_cast<CIdentToken*>(currentToken.get())->GetValue() << ")" << std::endl;
+        //std::cout << "ACCEPTED: ident(" << dynamic_cast<CIdentToken*>(currentToken.get())->GetValue() << ")" << std::endl;
         
     }
     lastToken = currentToken;
@@ -346,6 +352,7 @@ CIdentToken* CSyntax::AcceptTypeKeywords()
 
     if (currentScope->FindCIdent(dynamic_cast<CIdentToken*>(currentToken.get())->GetValue())==NULL)
     {
+        generator->changeGeneratorStage(GenerationStage::Error);
         std::cout << "��������� �������� ����� �� ���������... " << std::endl;
         return NULL;
     }
@@ -375,11 +382,12 @@ CType* CSyntax::AcceptConst(followers cFollowers, std::set<KeyWords> KeyWords)
 
     if (currentToken.get()->getType() != TokenType::ttConst)
     {
+        generator->changeGeneratorStage(GenerationStage::Error);
         skipToNextKeyword(KeyWords::errConst, cFollowers.l);
     }
     else
     {
-        std::cout << "ACCEPTED: const(" << dynamic_cast<CConstToken*>(currentToken.get())->ToString() << ")" << std::endl;
+        //std::cout << "ACCEPTED: const(" << dynamic_cast<CConstToken*>(currentToken.get())->ToString() << ")" << std::endl;
         retCType = currentScope->FindCType(GetConstType(dynamic_cast<CConstToken*>(currentToken.get())->ToString()));
     }
     generator->pushToken(currentToken);
@@ -615,6 +623,7 @@ void CSyntax::SimpleOperator(followers cFollowers)
         if (CheckKeyword(KeyWords::assignSy))
         {
             //AcceptKeyword(KeyWords::assignSy, cFollowers, {});
+            //Генератор, режим работы
             generator->changeGeneratorStage(GenerationStage::Nothing);
             t2 = AssignOperator(cFollowers);
         }
@@ -878,18 +887,25 @@ void CSyntax::IfOperator(followers cFollowers)
 {
     generator->changeGeneratorStage(GenerationStage::IFSTART);
     AcceptKeyword(KeyWords::ifSy, cFollowers, { KeyWords::thenSy,KeyWords::elseSy,KeyWords::semicolonSy });
+    generator->changeGeneratorStage(GenerationStage::THENSTART);
     generator->changeGeneratorStage(GenerationStage::Expression);
     CType* tmp = Expression(cFollowers);
     generator->changeGeneratorStage(GenerationStage::ExpressionLogicalIFEND);
     if (tmp != currentScope->FindCType("boolean"))
         ThrowSemanticError(SemanticError::IncompatibleTypes);
     AcceptKeyword(KeyWords::thenSy, cFollowers, { KeyWords::elseSy,KeyWords::semicolonSy });
+    generator->changeGeneratorStage(GenerationStage::Expression);
     UnmarkedOperator(cFollowers);
+    generator->changeGeneratorStage(GenerationStage::ExpressionIfEnd);
     if (CheckKeyword(KeyWords::elseSy))
     {
+        generator->changeGeneratorStage(GenerationStage::ELSESTART);
         AcceptKeyword();
+        generator->changeGeneratorStage(GenerationStage::Expression);
         UnmarkedOperator(cFollowers);
+        generator->changeGeneratorStage(GenerationStage::ExpressionIfEnd);
     }
+    generator->changeGeneratorStage(GenerationStage::IfEND);
 }
 
 void CSyntax::ChoiseOperator(followers cFollowers)
