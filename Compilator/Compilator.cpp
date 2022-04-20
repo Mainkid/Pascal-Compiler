@@ -13,10 +13,9 @@
 #include <memory>
 
 using namespace std;
+typedef std::unique_ptr<CSyntax> CSyntaxPtr;
 
-//TODO LEXER: Дописать парсинг комментариев
-//TODO LEXER: Регистр строки
-//TODO SYNTAX: Добавить WriteLN
+
 
 
 
@@ -27,31 +26,31 @@ R"(program myProgram;
 33 true false 14.12
 end.)";
 
-void testLexer()
-{
-    auto lexer = new CLexer(program + ' ');
-    CTokenPtr token = nullptr;
-    while (token = move(lexer->GetNextToken())) {
-
-        if (token.get()->getType() == TokenType::ttKeyword)
-        {
-            int code= static_cast<int>(dynamic_cast<CKeywordToken*>(token.get())->GetValue());
-            cout << code <<" ";
-        }
-        else if (token.get()->getType() == TokenType::ttConst)
-        {
-
-            cout << "constVal(" << dynamic_cast<CConstToken*>(token.get())->ToString() <<") ";
-        }
-        else if (token.get()->getType() == TokenType::ttIdent)
-        {
-            cout << "ident(" << dynamic_cast<CIdentToken*>(token.get())->GetValue() << ") ";
-        }
-
-        
-    }
-
-}
+//void testLexer()
+//{
+//    auto lexer = new CLexer(program + ' ');
+//    CTokenPtr token = nullptr;
+//    while (token = move(lexer->GetNextToken())) {
+//
+//        if (token.get()->getType() == TokenType::ttKeyword)
+//        {
+//            int code= static_cast<int>(dynamic_cast<CKeywordToken*>(token.get())->GetValue());
+//            cout << code <<" ";
+//        }
+//        else if (token.get()->getType() == TokenType::ttConst)
+//        {
+//
+//            cout << "constVal(" << dynamic_cast<CConstToken*>(token.get())->ToString() <<") ";
+//        }
+//        else if (token.get()->getType() == TokenType::ttIdent)
+//        {
+//            cout << "ident(" << dynamic_cast<CIdentToken*>(token.get())->GetValue() << ") ";
+//        }
+//
+//        
+//    }
+//
+//}
 
 int main()
 {
@@ -59,9 +58,8 @@ int main()
     //setlocale(0, "");
     std::setlocale(LC_NUMERIC, "POSIX");
     //testLexer();
-    
-
-    auto syntax = new CSyntax();
+     
+    CSyntaxPtr syntax = std::make_unique<CSyntax>();
     syntax->StartSyntaxAnalyze(program);
 
 }

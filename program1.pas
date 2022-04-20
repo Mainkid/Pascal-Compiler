@@ -1,15 +1,8 @@
-program firstOne;
-var a,b,d:integer;
-r:real;
-flag:boolean;
+PROgram second;
+var x,y:real;
+z:integer;
 begin
-a:=42;
-b:=35;
-while (a <> b) do begin
-if (a>b) then
-a:=a-b
-else
-b:=b-a;
-end;
-writeln(a)
+if x*x+y*/y<=1 then z=2
+             else if x*x+y*y<=4 thenn z:=1
+                                else z:=0
 end.

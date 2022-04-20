@@ -7,6 +7,8 @@
 #include <set>
 #include <iterator>
 
+
+
 enum class UsageType
 {
 	TYPE,
@@ -37,6 +39,8 @@ class CType;
 class CIdent;
 class Scope;
 
+typedef std::shared_ptr<Scope> ScopePtr;
+
 class CType
 {
 private:
@@ -64,7 +68,7 @@ public:
 class Scope
 {
 private:
-	Scope* parent;
+	ScopePtr parent;
 	std::set<CType*> typeSet;
 	std::map<std::string, CIdent*> identTable;
 	std::map<std::string, CType*> typeTable;
@@ -76,7 +80,7 @@ public:
 
 	CType* nullType = nullptr;
 
-	Scope(Scope* par);
+	Scope(ScopePtr par);
 
 
 	Scope();

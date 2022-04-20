@@ -16,7 +16,7 @@ b dd ?
 d dd ?
 r real8 ?
 flag dd FALSE
-const1 dd 42
+const1 dd 155
 const2 dd 35
 
 	.code

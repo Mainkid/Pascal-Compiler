@@ -139,6 +139,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="CGenerator.cpp" />
     <ClCompile Include="CLexer.cpp" />
     <ClCompile Include="Compilator.cpp" />
     <ClCompile Include="CSemantic.cpp" />

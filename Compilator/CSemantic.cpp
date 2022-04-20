@@ -17,10 +17,10 @@ void CType::AddConstant(CIdent* curConst)
 	 cType = cTypeParam;
  }
 
- Scope::Scope(Scope* par)
+ Scope::Scope(ScopePtr par)
  {
 	 parent = par;
-	 nullType = parent->nullType;
+	 nullType = parent.get()->nullType;
 	 //ScopeInit();
  }
 
@@ -57,7 +57,7 @@ void CType::AddConstant(CIdent* curConst)
 		 if (currentScope->typeTable.count(typeStr))
 			 return currentScope->typeTable[typeStr];
 		 else
-			 currentScope = currentScope->parent;
+			 currentScope = currentScope->parent.get();
 	 }
 	 return nullType;
  }
@@ -70,7 +70,7 @@ void CType::AddConstant(CIdent* curConst)
 		 if (currentScope->identTable.count(identStr))
 			 return currentScope->identTable[identStr];
 		 else
-			 currentScope = currentScope->parent;
+			 currentScope = currentScope->parent.get();
 	 }
 	 return NULL;
  }
@@ -100,7 +100,7 @@ void CType::AddConstant(CIdent* curConst)
 		 return SemanticError::AlreadyDeclared;
 
 	 AddIdent(ident->GetValue(), UsageType::PROC, NULL);
-	 procTable[ident->GetValue()] = new Scope(this);
+	 procTable[ident->GetValue()] = this;
 	 //procTable[ident->GetValue()]->parent = this;
 	 return SemanticError::NoError;
  }

@@ -26,7 +26,7 @@ void CSyntax::AddNewVariables(CIdentToken* type, UsageType usageType)
         if (!isSkipping && type != NULL)
         {
 
-            if (!ThrowSemanticError(currentScope->AddIdent(dynamic_cast<CIdentToken*>(identQueue.front().get()), usageType, type)))
+            if (!ThrowSemanticError(currentScope.get()->AddIdent(dynamic_cast<CIdentToken*>(identQueue.front().get()), usageType, type)))
             {
                 generator->pushToVariableQueue(identQueue.front());
             }
@@ -42,8 +42,9 @@ void CSyntax::AddNewVariablesToBrackets(CIdentToken* type, std::string procName)
     {
         if (!isSkipping && type != NULL)
         {
-            currentScope->AddParameter(currentScope->FindCType( type->GetValue()), procName);
-            ThrowSemanticError(currentScope->AddIdent(dynamic_cast<CIdentToken*>(identQueue.front().get()), UsageType::VAR, type));
+            CType* ctp = currentScope.get()->FindCType(type->GetValue());
+            currentScope.get()->AddParameter(ctp, procName);
+            ThrowSemanticError(currentScope.get()->AddIdent(dynamic_cast<CIdentToken*>(identQueue.front().get()), UsageType::VAR, type));
         }
         identQueue.pop();
     }
@@ -51,7 +52,7 @@ void CSyntax::AddNewVariablesToBrackets(CIdentToken* type, std::string procName)
 
 void CSyntax::AddNewProcIdent(CIdentToken* proc)
 {
-    ThrowSemanticError(currentScope->AddIdent(proc, UsageType::PROC, NULL));
+    ThrowSemanticError(currentScope.get()->AddIdent(proc, UsageType::PROC, NULL));
 }
 
 bool CSyntax::ThrowSemanticError(SemanticError err)
@@ -84,7 +85,7 @@ bool CSyntax::ThrowSemanticError(SemanticError err)
     if (semErrLine != -1)
         std::cout << " Line: " << semErrLine << ", Pos: " << semErrPos << std::endl;
     else
-        std::cout << " Line: " << lexer->GetLinePos() << ", Pos: " << lexer->GetSymbolPos() << std::endl;
+        std::cout << " Line: " << lexer.get()->GetLinePos() << ", Pos: " << lexer.get()->GetSymbolPos() << std::endl;
     semErrLine = -1;
     semErrPos = -1;
     return true;
@@ -92,10 +93,10 @@ bool CSyntax::ThrowSemanticError(SemanticError err)
 
 CType* CSyntax::GetCType(CIdentToken* tok)
 {
-    if (!isSkipping && currentScope->FindCType(tok->GetValue()) == currentScope->nullType)
+    if (!isSkipping && currentScope.get()->FindCType(tok->GetValue()) == currentScope.get()->nullType)
         ThrowSemanticError(SemanticError::UnknownType);
 
-    return currentScope->FindCType(tok->GetValue());
+    return currentScope.get()->FindCType(tok->GetValue());
 }
 
 CType* CSyntax::CheckSemantic(CType* t1, CType* t2)
@@ -104,9 +105,13 @@ CType* CSyntax::CheckSemantic(CType* t1, CType* t2)
 
     if (t1 == t2)
         return t1;
-    else if (t1 == currentScope->FindCType("real") && t2 == currentScope->FindCType("integer"))
+    else if (t1 == currentScope.get()->FindCType("real") && t2 == currentScope.get()->FindCType("integer"))
         return t1;
-    else if (t1 == currentScope->FindCType("integer") && t2 == currentScope->FindCType("real"))
+    else if (t1 == currentScope.get()->FindCType("integer") && t2 == currentScope.get()->FindCType("real"))
+        return t2;
+    else if (t1 == currentScope.get()->FindCType("boolean")&&(t2 == currentScope.get()->FindCType("false") || t2 == currentScope.get()->FindCType("true")))
+        return t1;
+    else if (t2 == currentScope.get()->FindCType("boolean") && (t1 == currentScope.get()->FindCType("false") || t1 == currentScope.get()->FindCType("true")))
         return t2;
     else if (t1 == NULL)
         return t2;
@@ -116,10 +121,10 @@ CType* CSyntax::CheckSemantic(CType* t1, CType* t2)
     {
         if (semErrLine == -1)
         {
-            semErrLine = lexer->GetLinePos();
-            semErrPos = lexer->GetSymbolPos();
+            semErrLine = lexer.get()->GetLinePos();
+            semErrPos = lexer.get()->GetSymbolPos();
         }
-        return currentScope->nullType;
+        return currentScope.get()->nullType;
 
     }
 
@@ -129,10 +134,10 @@ CType* CSyntax::CheckAssignSemantic(CType* t1, CType* t2)
 {
     if (t1 == t2)
         return t1;
-    else if (t1 == currentScope->FindCType("real") && t2 == currentScope->FindCType("integer"))
+    else if (t1 == currentScope.get()->FindCType("real") && t2 == currentScope.get()->FindCType("integer"))
         return t1;
-    else if (t1 == currentScope->FindCType("integer") && t2 == currentScope->FindCType("real"))
-        return currentScope->nullType;
+    else if (t1 == currentScope.get()->FindCType("integer") && t2 == currentScope.get()->FindCType("real"))
+        return currentScope.get()->nullType;
     else if (t1 == NULL)
         return t2;
     else if (t2 == NULL)
@@ -141,10 +146,10 @@ CType* CSyntax::CheckAssignSemantic(CType* t1, CType* t2)
     {
         if (semErrLine == -1)
         {
-            semErrLine = lexer->GetLinePos();
-            semErrPos = lexer->GetSymbolPos();
+            semErrLine = lexer.get()->GetLinePos();
+            semErrPos = lexer.get()->GetSymbolPos();
         }
-        return currentScope->nullType;
+        return currentScope.get()->nullType;
     }
 }
 
@@ -155,23 +160,23 @@ CType* CSyntax::CheckAssignSemantic(CType* t1, CType* t2)
 void CSyntax::GetNextNotEmptyToken()
 {
 
-    currentToken = move(lexer->GetNextToken());
+    currentToken = move(lexer.get()->GetNextToken());
 
     while (currentToken && currentToken.get()->getType() == TokenType::ttKeyword && dynamic_cast<CKeywordToken*>(currentToken.get())->GetValue() == KeyWords::emptyValueSy)
     {
-        currentToken = move(lexer->GetNextToken());
+        currentToken = move(lexer.get()->GetNextToken());
     }
 }
 
 std::string CSyntax::GetConstType(std::string constStr)
 {
-    if (lexer->IsBoolean(constStr))
+    if (lexer.get()->IsBoolean(constStr))
         return "boolean";
-    else if (lexer->IsInteger(constStr))
+    else if (lexer.get()->IsInteger(constStr))
         return "integer";
-    else if (lexer->IsReal(constStr))
+    else if (lexer.get()->IsReal(constStr))
         return "real";
-    else if (lexer->IsString(constStr))
+    else if (lexer.get()->IsString(constStr))
         return "string";
     else
         return "err";
@@ -182,10 +187,10 @@ void CSyntax::skipToNextKeyword(KeyWords keyWord, std::set<KeyWords> l)
     std::set <KeyWords> ::iterator it;
     if (keyWord == KeyWords::errIdent || keyWord == KeyWords::errConst)
     {
-        PrintError(keyWord == KeyWords::errConst, lexer->GetLinePos(), lexer->GetSymbolPos());
+        PrintError(keyWord == KeyWords::errConst, lexer.get()->GetLinePos(), lexer.get()->GetSymbolPos());
     }
     else
-        PrintError(keyWord, lexer->GetLinePos(), lexer->GetSymbolPos());
+        PrintError(keyWord, lexer.get()->GetLinePos(), lexer.get()->GetSymbolPos());
     while (currentToken && !isSkipping)
     {
         GetNextNotEmptyToken();
@@ -203,26 +208,27 @@ void CSyntax::skipToNextKeyword(KeyWords keyWord, std::set<KeyWords> l)
         }
 
         if (!currentToken)
-            PrintError(keyWord, lexer->GetLinePos(), lexer->GetSymbolPos());
+            PrintError(keyWord, lexer.get()->GetLinePos(), lexer.get()->GetSymbolPos());
     }
-
+    
 
 
     if (!currentToken)
     {
         if (isSkipping)
-            PrintError(keyWord, lexer->GetLinePos(), lexer->GetSymbolPos());
+            PrintError(keyWord, lexer.get()->GetLinePos(), lexer.get()->GetSymbolPos());
         exit(0);
     }
 }
 
 void CSyntax::StartSyntaxAnalyze(std::string program)
 {
-    lexer = new CLexer(program + ' ');
-    currentScope = new Scope();
-    currentScope = new Scope(currentScope);
+    lexer = std::make_unique<CLexer>(program + ' ');
+    //lexer.get() = new Clexer.get()(program + ' ');
+    currentScope = std::make_shared<Scope>();
+    currentScope = std::make_shared<Scope>(currentScope);
     //Генератор
-    generator = new CGenerator(true);
+    generator = std::make_unique <CGenerator>(false);
 
     GetNextNotEmptyToken();
     Program();
@@ -296,7 +302,7 @@ CKeywordToken* CSyntax::AcceptKeyword(KeyWords keyWord, followers cfollowers, st
     if (!currentToken)
     {
         if (isSkipping)
-            PrintError(keyWord, lexer->GetLinePos(), lexer->GetSymbolPos());
+            PrintError(keyWord, lexer.get()->GetLinePos(), lexer.get()->GetSymbolPos());
         else
             generator->printCodeToFile();
         exit(0);
@@ -350,7 +356,7 @@ CIdentToken* CSyntax::AcceptTypeKeywords()
 
     CIdentToken* tmp;
 
-    if (currentScope->FindCIdent(dynamic_cast<CIdentToken*>(currentToken.get())->GetValue())==NULL)
+    if (currentScope.get()->FindCIdent(dynamic_cast<CIdentToken*>(currentToken.get())->GetValue())==NULL)
     {
         generator->changeGeneratorStage(GenerationStage::Error);
         std::cout << "��������� �������� ����� �� ���������... " << std::endl;
@@ -363,6 +369,7 @@ CIdentToken* CSyntax::AcceptTypeKeywords()
             std::cout << "AIGHT" << std::endl;
             tmp = dynamic_cast<CIdentToken*>(currentToken.get());
     }
+    lastToken = currentToken;
     GetNextNotEmptyToken();
     if (!currentToken)
     {
@@ -376,9 +383,9 @@ CType* CSyntax::AcceptConst(followers cFollowers, std::set<KeyWords> KeyWords)
 {
     cFollowers.l.insert(KeyWords.begin(), KeyWords.end());
     if (isSkipping)
-        return currentScope->nullType;
+        return currentScope.get()->nullType;
 
-    CType* retCType = currentScope->nullType;
+    CType* retCType = currentScope.get()->nullType;
 
     if (currentToken.get()->getType() != TokenType::ttConst)
     {
@@ -387,8 +394,8 @@ CType* CSyntax::AcceptConst(followers cFollowers, std::set<KeyWords> KeyWords)
     }
     else
     {
-        //std::cout << "ACCEPTED: const(" << dynamic_cast<CConstToken*>(currentToken.get())->ToString() << ")" << std::endl;
-        retCType = currentScope->FindCType(GetConstType(dynamic_cast<CConstToken*>(currentToken.get())->ToString()));
+       // std::cout << "ACCEPTED: const(" << dynamic_cast<CConstToken*>(currentToken.get())->ToString() << ")" << std::endl;
+        retCType = currentScope.get()->FindCType(GetConstType(dynamic_cast<CConstToken*>(currentToken.get())->ToString()));
     }
     generator->pushToken(currentToken);
     GetNextNotEmptyToken();
@@ -636,13 +643,13 @@ void CSyntax::SimpleOperator(followers cFollowers)
         {
 
 
-            ThrowSemanticError(currentScope->CheckProcParametersAmount(-1, procName));
+            ThrowSemanticError(currentScope.get()->CheckProcParametersAmount(-1, procName));
             return;
         }
         else
             return;
 
-        if (CheckAssignSemantic(t1, t2) == currentScope->nullType)
+        if (CheckAssignSemantic(t1, t2) == currentScope.get()->nullType)
             ThrowSemanticError(SemanticError::IncompatibleTypes);
     }
     else
@@ -685,9 +692,9 @@ CType* CSyntax::Expression(followers cFollowers)
     {
         AcceptKeyword();
         t2 = SimpleExpression(cFollowers);
-        if (CheckSemantic(t1, t2) != currentScope->nullType)
-            return currentScope->FindCType("boolean");
-        else return currentScope->nullType;
+        if (CheckSemantic(t1, t2) != currentScope.get()->nullType)
+            return currentScope.get()->FindCType("boolean");
+        else return currentScope.get()->nullType;
     }
     
     return t1;
@@ -707,14 +714,14 @@ CType* CSyntax::SimpleExpression(followers cFollowers)
         t2 = Term(cFollowers);
         if (CheckKeyword(KeyWords::orSy))
         {
-            if (t1 != currentScope->FindCType("boolean") || t2 != currentScope->FindCType("boolean"))
-                t1 = currentScope->nullType;
+            if (t1 != currentScope.get()->FindCType("boolean") || t2 != currentScope.get()->FindCType("boolean"))
+                t1 = currentScope.get()->nullType;
         }
-        else
+        else if (CheckKeyword(KeyWords::plusSy)||CheckKeyword(KeyWords::minusSy))
         {
-            if (t1 == currentScope->FindCType("boolean") || t2 == currentScope->FindCType("boolean") ||
-                t1 == currentScope->FindCType("string")||t2==currentScope->FindCType("string"))
-                t1 = currentScope->nullType;
+            if (t1 == currentScope.get()->FindCType("boolean") || t2 == currentScope.get()->FindCType("boolean") ||
+                t1 == currentScope.get()->FindCType("string")||t2==currentScope.get()->FindCType("string"))
+                t1 = currentScope.get()->nullType;
         }
 
         t1 = CheckSemantic(t1, t2);
@@ -736,19 +743,19 @@ CType* CSyntax::Term(followers cFollowers)
 
         if (CheckKeyword(KeyWords::multiplySy) || CheckKeyword(KeyWords::divisionSy))
         {
-            if (t1 != currentScope->FindCType("integer") && t1 != currentScope->FindCType("real"))
-                t1 = currentScope->nullType;
+            if (t1 != currentScope.get()->FindCType("integer") && t1 != currentScope.get()->FindCType("real"))
+                t1 = currentScope.get()->nullType;
         }
         else if (CheckKeyword(KeyWords::divSy) || CheckKeyword(KeyWords::modSy))
         {
-            if (t1 != currentScope->FindCType("integer") || t2 != currentScope->FindCType("integer"))
-                t1 = currentScope->nullType;
+            if (t1 != currentScope.get()->FindCType("integer") || t2 != currentScope.get()->FindCType("integer"))
+                t1 = currentScope.get()->nullType;
             
         }
         else if (CheckKeyword(KeyWords::andSy) || CheckKeyword(KeyWords::orSy))
         {
-            if (t1 != currentScope->FindCType("boolean"))
-                t1 = currentScope->nullType;
+            if (t1 != currentScope.get()->FindCType("boolean"))
+                t1 = currentScope.get()->nullType;
         }
 
 
@@ -794,8 +801,8 @@ CType* CSyntax::Multiplier(followers cFollowers)
     }
     else
     {
-        PrintError(false, lexer->GetLinePos(), lexer->GetSymbolPos());
-        return currentScope->nullType;
+        PrintError(false, lexer.get()->GetLinePos(), lexer.get()->GetSymbolPos());
+        return currentScope.get()->nullType;
     }
 }
 
@@ -814,7 +821,7 @@ void CSyntax::FactParameter(followers cFollowers, std::string procedureName)
     int pos = 0;
 
     if (CheckIdent())
-        t1=currentScope->FindCType(dynamic_cast<CIdentToken*>( AcceptIdent(cFollowers, {}).get())->GetValue());
+        t1=currentScope.get()->FindCType(dynamic_cast<CIdentToken*>( AcceptIdent(cFollowers, {}).get())->GetValue());
     else
         t1=Expression(cFollowers);
 
@@ -823,17 +830,17 @@ void CSyntax::FactParameter(followers cFollowers, std::string procedureName)
 
     while (CheckKeyword(KeyWords::commaSy))
     {
-        ThrowSemanticError(currentScope->CheckProcedureParameters(pos, t1, procedureName));
+        ThrowSemanticError(currentScope.get()->CheckProcedureParameters(pos, t1, procedureName));
         AcceptKeyword();
         if (CheckIdent())
-            t1= currentScope->FindCType(dynamic_cast<CIdentToken*>(AcceptIdent(cFollowers, {}).get())->GetValue());
+            t1= currentScope.get()->FindCType(dynamic_cast<CIdentToken*>(AcceptIdent(cFollowers, {}).get())->GetValue());
         else
             t1=Expression(cFollowers);
         pos++;
     }
-    ThrowSemanticError(currentScope->CheckProcedureParameters(pos, t1, procedureName));
+    ThrowSemanticError(currentScope.get()->CheckProcedureParameters(pos, t1, procedureName));
 
-    ThrowSemanticError(currentScope->CheckProcParametersAmount(pos, procedureName));
+    ThrowSemanticError(currentScope.get()->CheckProcParametersAmount(pos, procedureName));
 }
 
 void CSyntax::ComplexOperator(followers cFollower)
@@ -846,7 +853,7 @@ void CSyntax::ComplexOperator(followers cFollower)
         CycleOperator(cFollower);
     else
     {
-        //PrintError(Constructions::no, lexer->GetLinePos(), lexer->GetSymbolPos());
+        //PrintError(Constructions::no, lexer.get()->GetLinePos(), lexer.get()->GetSymbolPos());
         return;
     }
 
@@ -864,7 +871,7 @@ void CSyntax::ChoosingOperator(followers cFollowers)
         ChoiseOperator(cFollowers);
     else
     {
-        PrintError(Constructions::no, lexer->GetLinePos(), lexer->GetSymbolPos());
+        PrintError(Constructions::no, lexer.get()->GetLinePos(), lexer.get()->GetSymbolPos());
         return;
     }
 }
@@ -876,7 +883,7 @@ void CSyntax::CycleOperator(followers cFollowers)
     generator->changeGeneratorStage(GenerationStage::Expression);
     CType* tmp = Expression(cFollowers);
     generator->changeGeneratorStage(GenerationStage::ExpressionLogicalEND);
-    if (tmp != currentScope->FindCType("boolean"))
+    if (tmp != currentScope.get()->FindCType("boolean"))
         ThrowSemanticError(SemanticError::IncompatibleTypes);
     AcceptKeyword(KeyWords::doSy, cFollowers, { KeyWords::semicolonSy });
     UnmarkedOperator(cFollowers);
@@ -891,7 +898,7 @@ void CSyntax::IfOperator(followers cFollowers)
     generator->changeGeneratorStage(GenerationStage::Expression);
     CType* tmp = Expression(cFollowers);
     generator->changeGeneratorStage(GenerationStage::ExpressionLogicalIFEND);
-    if (tmp != currentScope->FindCType("boolean"))
+    if (tmp != currentScope.get()->FindCType("boolean"))
         ThrowSemanticError(SemanticError::IncompatibleTypes);
     AcceptKeyword(KeyWords::thenSy, cFollowers, { KeyWords::elseSy,KeyWords::semicolonSy });
     generator->changeGeneratorStage(GenerationStage::Expression);
@@ -918,16 +925,16 @@ void CSyntax::ChoiseOperator(followers cFollowers)
     t2 = VariantListElement(cFollowers);
     while (CheckKeyword(KeyWords::semicolonSy))
     {
-        //if (t2==currentScope->nullType)
+        //if (t2==currentScope.get()->nullType)
           //  ThrowSemanticError(SemanticError::)
-        if (CheckAssignSemantic(t1, t2) == currentScope->nullType)
+        if (CheckAssignSemantic(t1, t2) == currentScope.get()->nullType)
             ThrowSemanticError(SemanticError::IncompatibleTypes);
 
         AcceptKeyword();
         t2 = VariantListElement(cFollowers);
 
     }
-    if (CheckAssignSemantic(t1, t2) == currentScope->nullType)
+    if (CheckAssignSemantic(t1, t2) == currentScope.get()->nullType)
         ThrowSemanticError(SemanticError::IncompatibleTypes);
     AcceptKeyword(KeyWords::endSy, cFollowers, { KeyWords::colonSy,KeyWords::endSy });
 
@@ -975,7 +982,7 @@ void CSyntax::ProcedureHeader(followers cFollowers)
     CIdentToken* cit = dynamic_cast<CIdentToken*>(q.get());
     AddNewProcIdent(cit);
     std::string procName = cit->GetValue();
-    currentScope = new Scope(currentScope);
+    currentScope = std::make_shared<Scope>(currentScope);
     
     
 
@@ -1024,7 +1031,7 @@ void CSyntax::ParametersGroup(followers cFollowers)
     }
     AcceptKeyword(KeyWords::colonSy, cFollowers, { KeyWords::integerSy,KeyWords::booleanSy,KeyWords::stringSy,KeyWords::realSy });
     CIdentToken* cit = AcceptTypeKeywords();
-    //currentScope->AddParameter(currentScope->FindCType(cit->GetValue()));
+    //currentScope.get()->AddParameter(currentScope.get()->FindCType(cit->GetValue()));
     AddNewVariables(cit, UsageType::VAR);
 
 }

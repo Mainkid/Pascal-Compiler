@@ -11,6 +11,8 @@
 #include <queue>
 
 typedef std::shared_ptr<CToken> CTokenPtr;
+typedef std::unique_ptr<CLexer> CLexerPtr;
+
 
 struct followers
 {
@@ -40,7 +42,7 @@ private:
 
 
 	KeyWords skipToKeyWord;
-	Scope* currentScope;
+	ScopePtr currentScope;
 	std::queue <CTokenPtr> identQueue;
 
 	void AddNewProcIdent(CIdentToken*);
@@ -107,8 +109,8 @@ private:
 
 	void AddNewVariablesToBrackets(CIdentToken*, std::string);
 	CTokenPtr currentToken=nullptr;
-	CLexer* lexer=nullptr;
-	CGenerator* generator = nullptr;
+	CLexerPtr lexer=nullptr;
+	std::unique_ptr<CGenerator> generator = nullptr;
 
 	CTokenPtr lastToken = nullptr;
 };
